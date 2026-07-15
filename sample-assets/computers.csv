@@ -1,0 +1,9 @@
+name;serial;otherserial;manufacturers_id;computertypes_id;computermodels_id;states_id;locations_id;comment
+PC-FIN-001;SN-CMP-001;INV-1001;Dell;Desktop;OptiPlex 7090;In use;Nairobi HQ;Finance analyst workstation
+PC-FIN-002;SN-CMP-002;INV-1002;Dell;Desktop;OptiPlex 7090;In use;Nairobi HQ;Finance analyst workstation
+PC-IT-001;SN-CMP-003;INV-1003;HP;Laptop;EliteBook 840 G8;In use;Nairobi HQ;IT support laptop
+PC-IT-002;SN-CMP-004;INV-1004;Lenovo;Laptop;ThinkPad T14;In use;Mombasa Branch;Field engineer laptop
+PC-HR-001;SN-CMP-005;INV-1005;Apple;Desktop;iMac 24;In use;Nairobi HQ;HR workstation
+PC-WHS-001;SN-CMP-006;INV-1006;HP;Desktop;ProDesk 400;In service;Mombasa Branch;Warehouse terminal
+PC-TRN-001;SN-CMP-007;INV-1007;Dell;Laptop;Latitude 5420;Available;Nairobi HQ;Training pool laptop
+PC-OLD-001;SN-CMP-008;INV-1008;Dell;Desktop;OptiPlex 3060;Out of service;Storage;Decommissioned, pending disposal

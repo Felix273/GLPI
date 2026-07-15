@@ -1,0 +1,8 @@
+name;serial;otherserial;manufacturers_id;monitortypes_id;monitormodels_id;states_id;locations_id;comment
+MON-FIN-001;SN-MON-001;INV-2001;Dell;LCD;P2422H 24;In use;Nairobi HQ;Finance dual-monitor A
+MON-FIN-002;SN-MON-002;INV-2002;Dell;LCD;P2422H 24;In use;Nairobi HQ;Finance dual-monitor B
+MON-IT-001;SN-MON-003;INV-2003;HP;LCD;E24 G4 24;In use;Nairobi HQ;IT monitor
+MON-HR-001;SN-MON-004;INV-2004;LG;LCD;27UN830 27;In use;Nairobi HQ;HR monitor
+MON-WHS-001;SN-MON-005;INV-2005;三星;LCD;S24R350 24;In service;Mombasa Branch;Warehouse monitor
+MON-TRN-001;SN-MON-006;INV-2006;AOC;LCD;24B2XH 24;Available;Nairobi HQ;Training pool monitor
+MON-OLD-001;SN-MON-007;INV-2007;Dell;LCD;E1916H 19;Out of service;Storage;Spare, no stand

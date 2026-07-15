@@ -1,0 +1,30 @@
+{
+    "financial": {
+        "purchaseDate": "",
+        "value": "",
+        "warrantyMonths": "",
+        "warrantyExpiry": "",
+        "supplier": "",
+        "orderNumber": ""
+    },
+    "stock": {
+        "quantity": "",
+        "threshold": "",
+        "relatedItem": ""
+    },
+    "importSource": {
+        "externalId": "",
+        "assetTag": "INV-1008",
+        "model": "",
+        "modelNo": "",
+        "category": "",
+        "location": "",
+        "defaultLocation": "",
+        "checkedOut": "",
+        "checkoutDate": "",
+        "createdAt": "",
+        "updatedAt": "",
+        "url": "",
+        "importedAt": "2026-07-14T13:39:01.461Z"
+    }
+}

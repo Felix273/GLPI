@@ -1,0 +1,6 @@
+name,serial,otherserial,manufacturers_id,phonetypes_id,phonemodels_id,states_id,locations_id,comment
+PHN-REC-001,SN-PHN-001,INV-5001,Cisco,IP phone,8841,In use,Nairobi HQ,Reception desk phone
+PHN-IT-001,SN-PHN-002,INV-5002,Yealink,IP phone,T46U,In use,Nairobi HQ,IT desk phone
+PHN-FIN-001,SN-PHN-003,INV-5003,Cisco,IP phone,8841,In use,Nairobi HQ,Finance phone
+PHN-MSA-001,SN-PHN-004,INV-5004,Grandstream,IP phone,GRP2613,In service,Mombasa Branch,Branch phone
+PHN-TRN-001,SN-PHN-005,INV-5005,Yealink,IP phone,T31P,Available,Nairobi HQ,Training pool phone

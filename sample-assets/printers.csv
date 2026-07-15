@@ -1,0 +1,7 @@
+name;serial;otherserial;manufacturers_id;printertypes_id;printermodels_id;states_id;locations_id;comment
+PRT-FIN-001;SN-PRT-001;INV-3001;HP;Laser;LaserJet Pro M404;In use;Nairobi HQ;Finance floor printer
+PRT-IT-001;SN-PRT-002;INV-3002;Brother;Laser;HL-L8360;In use;Nairobi HQ;IT lab printer
+PRT-HR-001;SN-PRT-003;INV-3003;Canon;Inkjet;PIXMA G650;In use;Nairobi HQ;HR color printer
+PRT-MSA-001;SN-PRT-004;INV-3004;Epson;Inkjet;L3250;In service;Mombasa Branch;Branch printer
+PRT-WHS-001;SN-PRT-005;INV-3005;Zebra;Label;ZD421;In use;Mombasa Branch;Logistics label printer
+PRT-TRN-001;SN-PRT-006;INV-3006;HP;Laser;Neverstop 1200;Available;Nairobi HQ;Training pool printer

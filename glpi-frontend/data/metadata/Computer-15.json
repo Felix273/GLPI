@@ -1,0 +1,30 @@
+{
+    "financial": {
+        "purchaseDate": "",
+        "value": "",
+        "warrantyMonths": "",
+        "warrantyExpiry": "",
+        "supplier": "",
+        "orderNumber": ""
+    },
+    "stock": {
+        "quantity": "",
+        "threshold": "",
+        "relatedItem": ""
+    },
+    "importSource": {
+        "externalId": "",
+        "assetTag": "INV-5005",
+        "model": "",
+        "modelNo": "",
+        "category": "",
+        "location": "",
+        "defaultLocation": "",
+        "checkedOut": "",
+        "checkoutDate": "",
+        "createdAt": "",
+        "updatedAt": "",
+        "url": "",
+        "importedAt": "2026-07-15T07:59:01.749Z"
+    }
+}
