@@ -1,0 +1,6 @@
+name,phonenumber,email,address,postcode,town,country,comment
+Dell East Africa,+254700000001,sales@dell-example.com,Longonot Road,00100,Nairobi,KE,Primary hardware supplier
+HP Kenya,+254711000002,orders@hp-example.co.ke,Waiyaki Way,00800,Nairobi,KE,Printers and laptops
+Cisco Distribution,+254733000003,procurement@cisco-example.com,Uhuru Highway,00100,Nairobi,KE,Network equipment
+UB Supplies,+254722000004,info@ub-example.com,Mombasa Road,00500,Nairobi,KE,General IT consumables
+Fortinet Partner,+254720000005,support@fortinet-example.com,Kilindini Rd,80100,Mombasa,KE,Security appliances

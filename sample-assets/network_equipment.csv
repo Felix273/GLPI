@@ -1,0 +1,8 @@
+name;serial;otherserial;manufacturers_id;networkequipmenttypes_id;networkequipmentmodels_id;states_id;locations_id;comment
+NET-CORE-001;SN-NET-001;INV-4001;Cisco;Switch;CAT 2960-X 48;In use;Nairobi HQ;Core distribution switch
+NET-CORE-002;SN-NET-002;INV-4002;Cisco;Switch;CAT 2960-X 24;In use;Mombasa Branch;Branch access switch
+NET-RTR-001;SN-NET-003;INV-4003;MikroTik;Router;CCR2004;In use;Nairobi HQ;Edge router
+NET-AP-001;SN-NET-004;INV-4004;Ubiquiti;Access point;U6-Pro;In use;Nairobi HQ;Floor 1 WiFi
+NET-AP-002;SN-NET-005;INV-4005;Ubiquiti;Access point;U6-Pro;In use;Mombasa Branch;Branch WiFi
+NET-FW-001;SN-NET-006;INV-4006;Fortinet;Firewall;FortiGate 60F;In use;Nairobi HQ;Perimeter firewall
+NET-OLD-001;SN-NET-007;INV-4007;HP;Switch;1910-24G;Out of service;Storage;Spare switch

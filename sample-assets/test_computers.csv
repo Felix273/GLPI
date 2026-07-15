@@ -1,0 +1,5 @@
+name,serial,otherserial,manufacturers_id,computertypes_id,computermodels_id,states_id,locations_id,comment
+PC-FIN-001,SN-CMP-001,INV-1001,Dell,Desktop,OptiPlex 7090,In use,Nairobi HQ,Finance analyst workstation
+PC-FIN-002,SN-CMP-002,INV-1002,Dell,Desktop,OptiPlex 7090,In use,Nairobi HQ,Finance analyst workstation
+PC-IT-001,SN-CMP-003,INV-2001,HP,Laptop,EliteBook 840,In use,Nairobi HQ,IT department laptop
+PC-IT-002,SN-CMP-004,INV-2002,Lenovo,Desktop,ThinkCentre M70q,In use,Nairobi HQ,IT department workstation
