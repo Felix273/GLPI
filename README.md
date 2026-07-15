@@ -91,5 +91,68 @@ GLPI/
                                |
                         MariaDB Database
 ```
+---
+
+# Installation
+
+## Prerequisites
+
+Before setting up the project, ensure you have the following installed:
+
+- Git
+- PHP 8.1+
+- Apache 2.4+
+- MariaDB/MySQL
+- Docker & Docker Compose (optional)
+- Composer
+- Node.js (if working on the frontend)
+
+---
+
+## Clone the Repository
+
+```bash
+git clone https://github.com/Felix273/GLPI.git
+cd GLPI
+git checkout develop
+```
+
+---
+
+## Configure GLPI
+
+1. Create a database.
+2. Configure Apache.
+3. Configure PHP.
+4. Update GLPI configuration.
+5. Start Apache and MariaDB.
+
+---
+
+## Docker Deployment
+
+```bash
+docker compose up -d
+```
+
+---
+
+## Start the Frontend
+
+```bash
+cd glpi-frontend
+```
+
+Run your preferred frontend development or build commands depending on the tooling used in that directory.
+
+---
+
+## Access the Application
+
+Open your browser and visit:
+
+```
+http://localhost
+```
 
 > **Project Status:** Active Development 🚧
