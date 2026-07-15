@@ -47,4 +47,49 @@ The goal is to transform GLPI into a comprehensive enterprise asset management p
 
 ---
 
+## Repository Structure
+
+```
+GLPI/
+├── backend/              # Backend services and API integrations
+├── config/               # Configuration files
+├── docker/               # Docker configuration
+├── docs/                 # Project documentation
+├── frontend/             # Future frontend components
+├── glpi/                 # GLPI core application
+├── glpi-frontend/        # Custom frontend dashboard
+├── plugins/              # Custom GLPI plugins
+├── sample-assets/        # Sample data for testing
+├── scripts/              # Utility and deployment scripts
+├── .github/              # GitHub workflows and templates
+├── .gitignore
+├── README.md
+└── start.sh
+```
+
+---
+
+## Project Architecture
+
+```text
+                    +-----------------------+
+                    |    Web Browser        |
+                    +----------+------------+
+                               |
+                               |
+                    Custom Frontend (UI)
+                               |
+                               |
+                 Backend API / Integration Layer
+                               |
+                               |
+                       GLPI REST API
+                               |
+                               |
+                      GLPI Core Application
+                               |
+                               |
+                        MariaDB Database
+```
+
 > **Project Status:** Active Development 🚧
