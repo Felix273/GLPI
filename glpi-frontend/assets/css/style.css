@@ -981,59 +981,6 @@ body {
 }
 
 /* ========================================
-   Responsive
-   ======================================== */
-@media (max-width: 768px) {
-    .mobile-menu-btn {
-        display: block;
-    }
-    .sidebar {
-        transform: translateX(-100%);
-        z-index: 100;
-    }
-    
-    .sidebar.mobile-open {
-        transform: translateX(0) !important;
-    }
-    .main-content {
-        margin-left: 0;
-    }
-    
-    .search-box {
-        width: 200px;
-    }
-    
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .charts-section {
-        grid-template-columns: 1fr;
-    }
-    
-    .form-row {
-        grid-template-columns: 1fr;
-    }
-    
-    .detail-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .filters-bar {
-        flex-direction: column;
-    }
-    
-    .filter-group {
-        width: 100%;
-    }
-    
-    .filter-group input,
-    .filter-group select {
-        width: 100%;
-    }
-}
-
-/* ========================================
    Reports & Analytics
    ======================================== */
 .report-cards {
@@ -1652,24 +1599,6 @@ body {
 }
 
 /* ========================================
-   Responsive
-   ======================================== */
-@media (max-width: 768px) {
-    .mobile-menu-btn {
-        display: block;
-    }
-    .notifications-panel {
-        right: 10px;
-        left: 10px;
-        width: auto;
-    }
-    
-    .alerts-summary {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* ========================================
    Form Section Titles
    ======================================== */
 .form-section-title {
@@ -1920,145 +1849,167 @@ body {
 }
 
 
-/* Mobile Sidebar Open State */
-.sidebar.mobile-open {
-    transform: translateX(0);
-}
-
-
 /* ========================================
-   Mobile Table Scroll Fix
+   Responsive - Mobile & Small Tablet
+   (single source of truth for all breakpoints;
+   .mobile-menu-btn / .sidebar-overlay base
+   states live with their components above)
    ======================================== */
 @media (max-width: 768px) {
-    .table-container {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+    /* Navigation / sidebar */
+    .mobile-menu-btn {
+        display: block;
     }
-    
-    .data-table {
-        min-width: 600px;
+
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
     }
-    
+
+    .sidebar.mobile-open {
+        transform: translateX(0);
+    }
+
+    .main-content {
+        margin-left: 0;
+    }
+
+    /* Top bar */
     .top-bar {
         padding: 0 16px;
     }
-    
+
     .search-box {
         flex: 1;
         min-width: 0;
     }
-    
+
     .header-actions {
         gap: 8px;
     }
-    
-    .btn-icon {
-        width: 36px;
-        height: 36px;
-    }
-    
+
+    /* Buttons */
     .btn {
         padding: 10px 16px;
         font-size: 14px;
     }
-    
-    .modal-content {
-        padding: 24px;
-        margin: 16px;
+
+    .btn-icon {
+        width: 36px;
+        height: 36px;
     }
-    
+
+    /* Grids */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .stat-card {
+        padding: 16px;
+    }
+
+    .stat-card .stat-value {
+        font-size: 24px;
+    }
+
+    .charts-section {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-card {
+        padding: 16px;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .alerts-summary {
+        grid-template-columns: 1fr;
+    }
+
+    /* Filters */
+    .filters-bar {
+        flex-direction: column;
+    }
+
+    .filter-group {
+        width: 100%;
+    }
+
+    .filter-group input,
+    .filter-group select {
+        width: 100%;
+    }
+
+    /* Tables */
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .data-table {
+        min-width: 600px;
+    }
+
+    /* View header */
     .view-header {
         flex-direction: column;
         align-items: flex-start;
         gap: 12px;
     }
-    
+
     .view-header h1 {
         font-size: 20px;
     }
-    
-    .stats-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
+
+    /* Modal */
+    .modal-content {
+        padding: 24px;
+        margin: 16px;
     }
-    
-    .stat-card {
-        padding: 16px;
-    }
-    
-    .stat-card .stat-value {
-        font-size: 24px;
-    }
-    
-    .chart-card {
-        padding: 16px;
+
+    /* Notifications */
+    .notifications-panel {
+        left: 10px;
+        right: 10px;
+        width: auto;
     }
 }
 
-/* ========================================
-   Responsive - Mobile Styles
-   ======================================== */
-@media (max-width: 768px) {
-    .mobile-menu-btn {
-        display: block;
-    }
-    
-    .sidebar {
-        transform: translateX(-100%);
-        z-index: 100;
-        transition: transform 0.3s ease;
-    }
-    
-    .sidebar.mobile-open {
-        transform: translateX(0);
-    }
-    
-    .sidebar-overlay {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 90;
-    }
-    
-    .sidebar-overlay.show {
-        display: block;
-    }
-    
-    .main-content {
-        margin-left: 0;
-    }
-    
-    .top-bar {
-        padding: 0 16px;
-    }
-    
-    .search-box {
-        flex: 1;
-    }
-    
-    .table-container {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-    
-    .data-table {
-        min-width: 600px;
-    }
-    
+/* Small phones (~390px and below) */
+@media (max-width: 480px) {
     .stats-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-    
-    .charts-section {
         grid-template-columns: 1fr;
     }
-    
+
+    .view-header h1 {
+        font-size: 18px;
+    }
+
     .modal-content {
-        margin: 16px;
-        padding: 24px;
+        padding: 20px;
+        margin: 12px;
+    }
+
+    .form-actions {
+        flex-direction: column-reverse;
+    }
+
+    .form-actions .btn-primary,
+    .form-actions .btn-secondary,
+    .form-actions .btn-danger {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .notification-bell {
+        top: 12px;
+        right: 12px;
     }
 }
