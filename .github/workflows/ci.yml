@@ -1,0 +1,49 @@
+name: GLPI CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  validate:
+    name: Validate Project
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+
+      - name: Display PHP Version
+        run: php -v
+
+      - name: Check PHP Syntax
+        run: |
+          find . -type f -name "*.php" -print0 | xargs -0 -n1 php -l
+
+      - name: Validate Docker Compose
+        run: |
+          if [ -f docker-compose.yml ]; then
+            docker compose config
+          else
+            echo "No docker-compose.yml found. Skipping."
+          fi
+
+      - name: Verify README Exists
+        run: test -f README.md
+
+      - name: Verify .gitignore Exists
+        run: test -f .gitignore
+
+      - name: Repository Validation Complete
+        run: echo "Repository validation completed successfully."
