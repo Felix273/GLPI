@@ -1,0 +1,34 @@
+<!-- Dashboard -->
+                <div id="dashboardView" class="view active">
+                    <div class="view-header dashboard-heading">
+                        <div><span class="eyebrow">Asset intelligence</span><h1>Operations overview</h1><p>Monitor inventory, asset health and recent activity from one workspace.</p></div>
+                        <div class="view-actions"><button class="btn-secondary" onclick="refreshDashboard()"><i class="fas fa-rotate"></i> Refresh</button><button class="btn-primary" onclick="showCreateModal('Computer')"><i class="fas fa-plus"></i> Add asset</button></div>
+                    </div>
+
+                    <div class="stats-grid" id="statsGrid"></div>
+
+                    <div class="charts-section">
+                        <div class="chart-card"><div class="card-heading"><div><span class="eyebrow">Distribution</span><h3>Assets by type</h3></div><span class="card-meta">Live inventory</span></div><div class="chart-wrap"><canvas id="assetTypeChart"></canvas></div></div>
+                        <div class="chart-card"><div class="card-heading"><div><span class="eyebrow">Condition</span><h3>Assets by status</h3></div><span class="card-meta">Current state</span></div><div class="chart-wrap"><canvas id="assetStatusChart"></canvas></div></div>
+                    </div>
+
+                    <div class="dashboard-section quick-actions-section">
+                        <div class="section-heading"><div><span class="eyebrow">Shortcuts</span><h2>Quick actions</h2></div></div>
+                        <div class="quick-actions">
+                            <button class="action-card" onclick="showCreateModal('Computer')"><span class="action-icon"><i class="fas fa-plus"></i></span><span class="action-copy"><strong>Add asset</strong><small>Register equipment in GLPI</small></span><i class="fas fa-arrow-right action-arrow"></i></button>
+                            <button class="action-card" onclick="showQuickAssignModal()"><span class="action-icon"><i class="fas fa-user-check"></i></span><span class="action-copy"><strong>Assign equipment</strong><small>Allocate an available asset</small></span><i class="fas fa-arrow-right action-arrow"></i></button>
+                            <button class="action-card" onclick="navigateTo('import')"><span class="action-icon"><i class="fas fa-file-arrow-up"></i></span><span class="action-copy"><strong>Import CSV</strong><small>Bulk upload asset records</small></span><i class="fas fa-arrow-right action-arrow"></i></button>
+                            <button class="action-card" onclick="exportAllAssets()"><span class="action-icon"><i class="fas fa-file-export"></i></span><span class="action-copy"><strong>Export inventory</strong><small>Download all asset data</small></span><i class="fas fa-arrow-right action-arrow"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-section recent-assets-section">
+                        <div class="section-heading"><div><span class="eyebrow">Latest activity</span><h2>Recent activity</h2></div><button class="text-button" onclick="navigateTo('computers')">View inventory <i class="fas fa-arrow-right"></i></button></div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead><tr><th>Activity</th><th>Asset</th><th>Type</th><th>Status</th><th>When</th></tr></thead>
+                                <tbody id="recentAssetsTable"><tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>

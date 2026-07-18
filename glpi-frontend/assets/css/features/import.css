@@ -1,0 +1,294 @@
+/* CSV user-resolution review */
+.import-user-mapping-section {
+    margin-top: 24px;
+    padding: 22px;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 16px;
+    background: var(--card-bg, #ffffff);
+}
+
+.import-user-mapping-section[hidden] {
+    display: none !important;
+}
+
+.import-user-mapping-section .section-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 18px;
+}
+
+.import-user-mapping-section .section-heading h3 {
+    margin: 3px 0 5px;
+}
+
+.import-user-mapping-section .section-heading p {
+    margin: 0;
+    max-width: 680px;
+    color: var(--text-muted, #64748b);
+}
+
+.import-mapping-summary {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.mapping-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.mapping-summary.matched {
+    color: #047857;
+    background: #ecfdf5;
+}
+
+.mapping-summary.ambiguous {
+    color: #a16207;
+    background: #fefce8;
+}
+
+.mapping-summary.unmatched {
+    color: #b91c1c;
+    background: #fef2f2;
+}
+
+.import-directory-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.import-directory-note i {
+    margin-top: 3px;
+}
+
+.import-directory-note p {
+    margin: 4px 0 0;
+}
+
+.mapping-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.mapping-status.matched {
+    color: #047857;
+    background: #ecfdf5;
+}
+
+.mapping-status.ambiguous {
+    color: #a16207;
+    background: #fefce8;
+}
+
+.mapping-status.unmatched {
+    color: #b91c1c;
+    background: #fef2f2;
+}
+
+.mapping-status.unassigned {
+    color: #475569;
+    background: #f1f5f9;
+}
+
+.import-user-select {
+    min-width: 280px;
+    max-width: 440px;
+}
+
+@media (max-width: 900px) {
+    .import-user-mapping-section .section-heading {
+        flex-direction: column;
+    }
+
+    .import-mapping-summary {
+        justify-content: flex-start;
+    }
+
+    .import-user-select {
+        min-width: 220px;
+    }
+}
+
+@media (max-width: 600px) {
+    .import-user-mapping-section {
+        padding: 16px;
+    }
+
+    .import-user-select {
+        min-width: 190px;
+    }
+}
+
+
+.mapping-summary.office,
+.mapping-status.office {
+    color: #1d4ed8;
+    background: #eff6ff;
+}
+
+
+/* Inventory Health and Software Matrix pages */
+.inventory-page-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.software-kpi-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.inventory-page-kpi {
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: var(--bg-card);
+}
+
+.inventory-page-kpi span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 8px;
+    font-weight: 750;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+.inventory-page-kpi strong {
+    display: block;
+    margin-top: 7px;
+    color: var(--text-primary);
+    font-size: 22px;
+}
+
+.inventory-page-kpi.healthy {
+    border-color: rgba(16, 185, 129, .28);
+}
+
+.inventory-page-kpi.warning {
+    border-color: rgba(245, 158, 11, .32);
+}
+
+.inventory-page-kpi.critical {
+    border-color: rgba(239, 68, 68, .28);
+}
+
+.inventory-health-filters {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) 210px 190px;
+    gap: 10px;
+}
+
+.inventory-health-filters input,
+.inventory-health-filters select {
+    min-height: 39px;
+}
+
+.inventory-page-table {
+    max-height: calc(100vh - 340px);
+}
+
+.inventory-computer-cell strong,
+.inventory-computer-cell small {
+    display: block;
+}
+
+.inventory-computer-cell strong {
+    color: var(--text-primary);
+    font-size: 10px;
+}
+
+.inventory-computer-cell small,
+.inventory-muted {
+    color: var(--text-muted);
+    font-size: 8px;
+}
+
+.software-matrix-table {
+    max-height: calc(100vh - 320px);
+}
+
+.software-deployment-details {
+    min-width: 150px;
+}
+
+.software-deployment-details summary {
+    color: var(--primary);
+    cursor: pointer;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.software-deployment-content {
+    display: grid;
+    gap: 7px;
+    min-width: 280px;
+    max-width: 430px;
+    padding: 10px 0 2px;
+}
+
+.software-deployment-content strong {
+    color: var(--text-secondary);
+    font-size: 8px;
+    text-transform: uppercase;
+}
+
+.software-detail-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.software-detail-chips span {
+    padding: 4px 7px;
+    border-radius: 999px;
+    color: var(--text-secondary);
+    background: var(--bg-hover);
+    font-size: 8px;
+}
+
+.software-detail-chips em {
+    color: var(--text-muted);
+    font-size: 8px;
+}
+
+@media (max-width: 1300px) {
+    .inventory-page-kpi-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .software-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 800px) {
+    .inventory-page-kpi-grid,
+    .software-kpi-grid,
+    .inventory-health-filters {
+        grid-template-columns: 1fr;
+    }
+
+    .inventory-page-table,
+    .software-matrix-table {
+        max-height: none;
+    }
+}

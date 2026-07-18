@@ -1,0 +1,86 @@
+<!-- Create/Edit Asset Modal -->
+    <div id="createModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="createModalTitle">Add New Asset</h2>
+                <button class="modal-close" onclick="closeModal('createModal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="createAssetForm">
+                    <div class="form-section-title">Basic Information</div>
+                    <div class="form-row">
+                        <div class="form-group"><label for="assetName">Name *</label><input type="text" id="assetName" required></div>
+                        <div class="form-group">
+                            <label for="assetStatus">Status</label>
+                            <select id="assetStatus"><option value="0">Available</option><option value="1">Assigned</option><option value="2">Retired</option><option value="3">Maintenance</option></select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label for="assetType">Type</label><input type="text" id="assetType" placeholder="e.g. Desktop, Laptop, Server"></div>
+                        <div class="form-group"><label for="assetLocation">Location</label><input type="text" id="assetLocation"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label for="assetSerial">Serial Number</label><input type="text" id="assetSerial"></div>
+                        <div class="form-group"><label for="assetInventory">Inventory Number</label><input type="text" id="assetInventory"></div>
+                    </div>
+
+                    <div class="form-section-title">Financial Information</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="assetPurchaseDate">Purchase Date</label>
+                            <input type="date" id="assetPurchaseDate">
+                        </div>
+                        <div class="form-group">
+                            <label for="assetPurchaseValue">Purchase Value ($)</label>
+                            <input type="number" id="assetPurchaseValue" placeholder="0.00" min="0" step="0.01">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="assetWarranty">Warranty (months)</label>
+                            <input type="number" id="assetWarranty" placeholder="12" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="assetWarrantyExpiry">Warranty Expiry</label>
+                            <input type="date" id="assetWarrantyExpiry">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="assetSupplier">Supplier</label>
+                            <input type="text" id="assetSupplier">
+                        </div>
+                        <div class="form-group">
+                            <label for="assetOrderNumber">Order Number</label>
+                            <input type="text" id="assetOrderNumber">
+                        </div>
+                    </div>
+
+                    <div class="form-section-title">Stock Tracking</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="assetStockQuantity">Quantity</label>
+                            <input type="number" id="assetStockQuantity" placeholder="0" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="assetStockThreshold">Low Stock Threshold</label>
+                            <input type="number" id="assetStockThreshold" placeholder="5" min="0">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="assetRelatedItem">Related Asset</label>
+                        <input type="text" id="assetRelatedItem" placeholder="e.g. Printer, rack, linked computer">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="assetComments">Comments</label>
+                        <textarea id="assetComments" rows="3"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="closeModal('createModal')">Cancel</button>
+                        <button type="submit" class="btn-primary">Save Asset</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>

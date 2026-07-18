@@ -1,0 +1,100 @@
+<!-- Reports View -->
+                <div id="reportsView" class="view">
+                    <div class="view-header">
+                        <div>
+                            <span class="eyebrow">Inventory intelligence</span>
+                            <h1>Reports and analytics</h1>
+                            <p>Review asset value, assignments, warranties and inventory distribution using live GLPI records.</p>
+                        </div>
+                        <div class="view-actions">
+                            <button class="btn-secondary" onclick="loadReports()">
+                                <i class="fas fa-rotate"></i> Refresh
+                            </button>
+                            <button class="btn-primary" onclick="exportReport()">
+                                <i class="fas fa-file-export"></i> Export asset register
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="report-cards">
+                        <div class="report-card">
+                            <h3>Total assets</h3>
+                            <div class="report-value" id="reportTotalAssets">0</div>
+                        </div>
+                        <div class="report-card">
+                            <h3>Assigned assets</h3>
+                            <div class="report-value" id="reportActiveAssets">0</div>
+                        </div>
+                        <div class="report-card">
+                            <h3>Total asset value</h3>
+                            <div class="report-value" id="reportTotalValue">-</div>
+                        </div>
+                        <div class="report-card">
+                            <h3>Warranties expiring</h3>
+                            <div class="report-value" id="reportExpiring">0</div>
+                        </div>
+                    </div>
+
+                    <div class="report-panel">
+                        <div class="section-heading">
+                            <div>
+                                <span class="eyebrow">Audit register</span>
+                                <h2>Asset register</h2>
+                            </div>
+                            <span class="card-meta" id="reportResultCount">0 records</span>
+                        </div>
+
+                        <div class="report-filters">
+                            <input
+                                class="form-control"
+                                id="reportSearch"
+                                type="search"
+                                placeholder="Search asset, tag, serial, user or location..."
+                                oninput="renderReportTable()"
+                            >
+                            <select class="form-control" id="reportTypeFilter" onchange="renderReportTable()">
+                                <option value="">All asset types</option>
+                            </select>
+                            <select class="form-control" id="reportStatusFilter" onchange="renderReportTable()">
+                                <option value="">All statuses</option>
+                                <option value="available">Available</option>
+                                <option value="assigned">Assigned</option>
+                                <option value="maintenance">Maintenance</option>
+                                <option value="other">Other</option>
+                            </select>
+                            <select class="form-control" id="reportWarrantyFilter" onchange="renderReportTable()">
+                                <option value="">All warranties</option>
+                                <option value="active">Active</option>
+                                <option value="expiring">Expiring soon</option>
+                                <option value="expired">Expired</option>
+                                <option value="unknown">Not recorded</option>
+                            </select>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Asset</th>
+                                        <th>Type</th>
+                                        <th>Tag / Serial</th>
+                                        <th>Assigned to</th>
+                                        <th>Location</th>
+                                        <th>Status</th>
+                                        <th>Value</th>
+                                        <th>Warranty</th>
+                                        <th>Modified</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reportAssetsTable">
+                                    <tr>
+                                        <td colspan="10">
+                                            <div class="loading"><div class="spinner"></div></div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>

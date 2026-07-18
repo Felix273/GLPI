@@ -101,3 +101,22 @@ coverage/
 # ===========================
 *.bak
 *.tmp
+.env.settings
+
+# ===========================
+# Local Backups and Checkpoints
+# ===========================
+*-backup-*/
+*-backups/
+*-checkpoint-*/
+*-archives-*/
+inventory-agent-backups/
+
+# ===========================
+# Frontend Runtime Data
+# ===========================
+glpi-frontend/data/settings.json
+glpi-frontend/data/metadata/*.json
+glpi-frontend/data/documents/*
+!glpi-frontend/data/metadata/.gitkeep
+!glpi-frontend/data/documents/.gitkeep

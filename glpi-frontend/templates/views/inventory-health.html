@@ -1,0 +1,85 @@
+<!-- Inventory Health View -->
+<div id="inventoryHealthView" class="view">
+    <div class="view-header">
+        <div>
+            <span class="eyebrow">GLPI Agent coverage</span>
+            <h1>Inventory Health</h1>
+        </div>
+        <button class="btn-secondary" onclick="loadInventoryHealth()">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+
+    <div class="inventory-page-kpi-grid">
+        <article class="inventory-page-kpi">
+            <span>Total Computers</span>
+            <strong id="healthTotal">-</strong>
+        </article>
+        <article class="inventory-page-kpi">
+            <span>Registered Agents</span>
+            <strong id="healthAgents">-</strong>
+        </article>
+        <article class="inventory-page-kpi healthy">
+            <span>Reporting in 24 Hours</span>
+            <strong id="healthReporting24">-</strong>
+        </article>
+        <article class="inventory-page-kpi healthy">
+            <span>Reporting in 7 Days</span>
+            <strong id="healthReporting">-</strong>
+        </article>
+        <article class="inventory-page-kpi warning">
+            <span>Stale 14+ Days</span>
+            <strong id="healthStale">-</strong>
+        </article>
+        <article class="inventory-page-kpi critical">
+            <span>Never Reported</span>
+            <strong id="healthNever">-</strong>
+        </article>
+    </div>
+
+    <div class="filters-bar inventory-health-filters">
+        <input
+            type="search"
+            id="inventoryHealthSearch"
+            placeholder="Search computer, serial, agent or tag..."
+            oninput="renderInventoryHealth()"
+        >
+        <select
+            id="inventoryHealthStatusFilter"
+            onchange="renderInventoryHealth()"
+        >
+            <option value="">All health states</option>
+            <option value="healthy">Healthy</option>
+            <option value="stale">Stale</option>
+            <option value="never">Never reported</option>
+        </select>
+        <select
+            id="inventoryHealthAgentFilter"
+            onchange="renderInventoryHealth()"
+        >
+            <option value="">All computers</option>
+            <option value="managed">Agent managed</option>
+            <option value="unmanaged">Without agent</option>
+        </select>
+    </div>
+
+    <div class="table-container inventory-page-table">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Computer</th>
+                    <th>Serial</th>
+                    <th>Agent</th>
+                    <th>Version</th>
+                    <th>Last Contact</th>
+                    <th>Last Inventory</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="inventoryHealthTable"></tbody>
+        </table>
+    </div>
+
+    <p class="inventory-result-note" id="inventoryHealthResultNote"></p>
+</div>
