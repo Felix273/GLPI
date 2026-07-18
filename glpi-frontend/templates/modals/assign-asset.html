@@ -1,0 +1,27 @@
+<!-- Assign Modal -->
+    <div id="assignModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Assign to User</h2><button class="modal-close" onclick="closeModal('assignModal')"><i class="fas fa-times"></i></button></div>
+            <div class="modal-body">
+                <form id="assignUserForm">
+                    <div class="form-group" id="assignAssetGroup" style="display:none;">
+                        <label for="assignAssetSelect">Equipment</label>
+                        <select id="assignAssetSelect"><option value="">Loading available assets...</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="assignUserSelect">User</label>
+                        <select id="assignUserSelect" required><option value="">Loading users...</option></select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label for="assignDate">Assignment date</label><input type="date" id="assignDate"></div>
+                        <div class="form-group"><label for="assignDueDate">Expected return</label><input type="date" id="assignDueDate"></div>
+                    </div>
+                    <div class="form-group"><label for="assignNotes">Notes</label><textarea id="assignNotes" rows="3" placeholder="Purpose, department or handover notes"></textarea></div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="closeModal('assignModal')">Cancel</button>
+                        <button type="submit" class="btn-primary"><i class="fas fa-user-check"></i> Assign equipment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>

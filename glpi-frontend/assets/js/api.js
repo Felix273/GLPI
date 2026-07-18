@@ -80,6 +80,10 @@ class GLPIClient {
             const data = contentType.includes('application/json') ? await response.json() : await response.text();
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    this.sessionToken = null;
+                    window.dispatchEvent(new CustomEvent('glpi:session-expired'));
+                }
                 const message = Array.isArray(data)
                     ? data.filter(Boolean).join(': ')
                     : typeof data === 'string'
@@ -170,20 +174,101 @@ class GLPIClient {
     }
 
     async backendRequest(url, options = {}) {
-        const response = await fetch(url, {
-            ...options,
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
-        });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), options.timeout || 30000);
+        let response;
+        try {
+            const isFormData = options.body instanceof FormData;
+            const headers = {
+                ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+                ...(options.headers || {})
+            };
+
+            response = await fetch(url, {
+                ...options,
+                signal: options.signal || controller.signal,
+                credentials: 'same-origin',
+                headers
+            });
+        } catch (error) {
+            if (error.name === 'AbortError') throw new Error('The request timed out. Check the GLPI connection and try again.');
+            throw new Error('Unable to reach the GLPI service. Check your connection and try again.');
+        } finally {
+            clearTimeout(timeout);
+        }
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
             if (response.status === 401) {
                 this.sessionToken = null;
                 this.backendAuthenticated = false;
+                window.dispatchEvent(new CustomEvent('glpi:session-expired'));
             }
-            throw new Error(data.error || `HTTP ${response.status}`);
+            const message = data.error || data.message || `HTTP ${response.status}`;
+            throw new Error(message);
         }
         return data;
+    }
+
+    async getPublicSettings() {
+        if (!this.backendMode) return null;
+        return await this.backendRequest('/backend/settings/public');
+    }
+
+    async getSettings() {
+        if (!this.backendMode) return null;
+        return await this.backendRequest('/backend/settings');
+    }
+
+    async saveSettings(settings) {
+        if (!this.backendMode) return null;
+        return await this.backendRequest('/backend/settings', {
+            method: 'PUT',
+            body: JSON.stringify(settings)
+        });
+    }
+
+    async uploadOrganizationLogo(file) {
+        if (!this.backendMode) return null;
+        const formData = new FormData();
+        formData.append('logo', file);
+
+        return await this.backendRequest('/backend/settings/logo', {
+            method: 'POST',
+            body: formData,
+            timeout: 60000
+        });
+    }
+
+    async testDirectory(directory) {
+        if (!this.backendMode) return null;
+        return await this.backendRequest('/backend/settings/directory/test', {
+            method: 'POST',
+            body: JSON.stringify({ directory }),
+            timeout: 30000
+        });
+    }
+
+    async previewDirectory(directory, limit = 20) {
+        if (!this.backendMode) return null;
+        return await this.backendRequest('/backend/settings/directory/preview', {
+            method: 'POST',
+            body: JSON.stringify({ directory, limit }),
+            timeout: 30000
+        });
+    }
+
+    async syncDirectory(directory, mode = 'all') {
+        if (!this.backendMode) return null;
+        return await this.backendRequest('/backend/settings/directory/sync', {
+            method: 'POST',
+            body: JSON.stringify({ directory, mode }),
+            timeout: 120000
+        });
+    }
+
+    async getAllMetadata() {
+        if (!this.backendMode) return null;
+        return await this.backendRequest('/backend/metadata');
     }
 
     async getMetadata(itemtype, id) {

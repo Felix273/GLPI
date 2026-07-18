@@ -1,0 +1,409 @@
+<!-- Settings View -->
+                <div id="settingsView" class="view">
+                    <div class="view-header settings-page-header">
+                        <div>
+                            <span class="eyebrow">Administration</span>
+                            <h1>System settings</h1>
+                            <p>Manage organization branding, inventory defaults and Active Directory integration.</p>
+                        </div>
+                        <div class="view-actions">
+                            <button class="btn-secondary" onclick="loadSettingsPage(true)">
+                                <i class="fas fa-rotate"></i> Refresh
+                            </button>
+                            <button class="btn-primary" id="saveSettingsBtn" onclick="saveSystemSettings()">
+                                <i class="fas fa-floppy-disk"></i> Save settings
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="settingsAccessMessage" class="settings-access-message" hidden>
+                        <i class="fas fa-shield-halved"></i>
+                        <div>
+                            <strong>Administrator access required</strong>
+                            <p>Only GLPI administrators can view or change system settings.</p>
+                        </div>
+                    </div>
+
+                    <div id="settingsContent" class="settings-layout">
+                        <aside class="settings-tabs" aria-label="Settings sections">
+                            <button class="settings-tab active" data-settings-tab="branding" onclick="switchSettingsTab('branding')">
+                                <i class="fas fa-building"></i>
+                                <span><strong>Organization</strong><small>Branding and identity</small></span>
+                            </button>
+                            <button class="settings-tab" data-settings-tab="general" onclick="switchSettingsTab('general')">
+                                <i class="fas fa-sliders"></i>
+                                <span><strong>General</strong><small>System defaults</small></span>
+                            </button>
+                            <button class="settings-tab" data-settings-tab="directory" onclick="switchSettingsTab('directory')">
+                                <i class="fas fa-address-book"></i>
+                                <span><strong>Active Directory</strong><small>LDAP and user sync</small></span>
+                            </button>
+                            <button class="settings-tab" data-settings-tab="sync" onclick="switchSettingsTab('sync')">
+                                <i class="fas fa-arrows-rotate"></i>
+                                <span><strong>Synchronization</strong><small>Status and actions</small></span>
+                            </button>
+                            <button class="settings-tab" data-settings-tab="audit" onclick="switchSettingsTab('audit')">
+                                <i class="fas fa-shield"></i>
+                                <span><strong>Security</strong><small>Audit and protection</small></span>
+                            </button>
+                        </aside>
+
+                        <div class="settings-panels">
+                            <section class="settings-panel active" data-settings-panel="branding">
+                                <div class="settings-section-heading">
+                                    <div>
+                                        <span class="eyebrow">Brand identity</span>
+                                        <h2>Organization profile</h2>
+                                        <p>Displayed in the sidebar, browser title and workspace header.</p>
+                                    </div>
+                                </div>
+
+                                <div class="branding-settings-grid">
+                                    <div class="logo-upload-card">
+                                        <div class="organization-logo-preview" id="organizationLogoPreview">
+                                            <i class="fas fa-building"></i>
+                                        </div>
+                                        <div>
+                                            <h3>Organization logo</h3>
+                                            <p>PNG, JPG, WebP or SVG. Maximum size: 2 MB.</p>
+                                            <input id="organizationLogoInput" type="file" accept=".png,.jpg,.jpeg,.webp,.svg,image/png,image/jpeg,image/webp,image/svg+xml" hidden>
+                                            <div class="settings-inline-actions">
+                                                <button class="btn-secondary" onclick="document.getElementById('organizationLogoInput').click()">
+                                                    <i class="fas fa-upload"></i> Choose logo
+                                                </button>
+                                                <button class="btn-primary" id="uploadLogoBtn" onclick="uploadOrganizationLogo()">
+                                                    <i class="fas fa-cloud-arrow-up"></i> Upload
+                                                </button>
+                                            </div>
+                                            <span id="selectedLogoName" class="settings-field-note">No file selected</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="settings-form-grid">
+                                        <label class="settings-field">
+                                            <span>Organization name</span>
+                                            <input class="form-control" id="settingsOrganizationName" type="text" maxlength="120" placeholder="Organization name">
+                                        </label>
+                                        <label class="settings-field">
+                                            <span>Sidebar subtitle</span>
+                                            <input class="form-control" id="settingsOrganizationSubtitle" type="text" maxlength="120" placeholder="IT operations">
+                                        </label>
+                                        <label class="settings-field settings-field-wide">
+                                            <span>Workspace name</span>
+                                            <input class="form-control" id="settingsWorkspaceName" type="text" maxlength="120" placeholder="Primary workspace">
+                                        </label>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="settings-panel" data-settings-panel="general">
+                                <div class="settings-section-heading">
+                                    <div>
+                                        <span class="eyebrow">System behaviour</span>
+                                        <h2>General defaults</h2>
+                                        <p>Defaults used across dashboards, reports and inventory screens.</p>
+                                    </div>
+                                </div>
+
+                                <div class="settings-form-grid">
+                                    <label class="settings-field">
+                                        <span>Currency</span>
+                                        <select class="form-control" id="settingsCurrency">
+                                            <option value="KES">KES — Kenyan Shilling</option>
+                                            <option value="USD">USD — US Dollar</option>
+                                            <option value="EUR">EUR — Euro</option>
+                                            <option value="GBP">GBP — British Pound</option>
+                                            <option value="TZS">TZS — Tanzanian Shilling</option>
+                                            <option value="UGX">UGX — Ugandan Shilling</option>
+                                        </select>
+                                    </label>
+                                    <label class="settings-field">
+                                        <span>Timezone</span>
+                                        <select class="form-control" id="settingsTimezone">
+                                            <option value="Africa/Nairobi">Africa/Nairobi</option>
+                                            <option value="UTC">UTC</option>
+                                            <option value="Africa/Kampala">Africa/Kampala</option>
+                                            <option value="Africa/Dar_es_Salaam">Africa/Dar_es_Salaam</option>
+                                            <option value="Africa/Addis_Ababa">Africa/Addis Ababa</option>
+                                        </select>
+                                    </label>
+                                    <label class="settings-field">
+                                        <span>Warranty warning period</span>
+                                        <div class="input-with-suffix">
+                                            <input class="form-control" id="settingsWarrantyDays" type="number" min="1" max="365" value="30">
+                                            <span>days</span>
+                                        </div>
+                                    </label>
+                                    <label class="settings-field">
+                                        <span>Rows per page</span>
+                                        <select class="form-control" id="settingsItemsPerPage">
+                                            <option value="5">5</option>
+                                            <option value="10">10</option>
+                                            <option value="20">20</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                        </select>
+                                    </label>
+                                </div>
+
+                                <div class="settings-info-card">
+                                    <i class="fas fa-circle-info"></i>
+                                    <div>
+                                        <strong>GLPI remains the system of record</strong>
+                                        <p>These options control the enhanced interface only. Core inventory, authentication and permissions remain managed by GLPI.</p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="settings-panel" data-settings-panel="directory">
+                                <div class="settings-section-heading">
+                                    <div>
+                                        <span class="eyebrow">Microsoft directory services</span>
+                                        <h2>Active Directory connection</h2>
+                                        <p>Configure LDAP v3 access using GLPI-compatible Active Directory mappings.</p>
+                                    </div>
+                                    <label class="settings-switch">
+                                        <input id="directoryEnabled" type="checkbox">
+                                        <span></span>
+                                        <strong>Enable directory</strong>
+                                    </label>
+                                </div>
+
+                                <div class="settings-form-grid directory-form-grid">
+                                    <label class="settings-field settings-field-wide">
+                                        <span>Connection name</span>
+                                        <input class="form-control" id="directoryName" type="text" value="Microsoft Active Directory">
+                                    </label>
+                                    <label class="settings-field">
+                                        <span>Domain controller / host</span>
+                                        <input class="form-control" id="directoryHost" type="text" placeholder="dc01.example.local">
+                                    </label>
+                                    <label class="settings-field">
+                                        <span>Port</span>
+                                        <input class="form-control" id="directoryPort" type="number" min="1" max="65535" value="389">
+                                    </label>
+                                    <label class="settings-field settings-field-wide">
+                                        <span>Base DN</span>
+                                        <input class="form-control" id="directoryBaseDn" type="text" placeholder="DC=example,DC=local">
+                                    </label>
+                                    <label class="settings-field settings-field-wide">
+                                        <span>Bind DN / service account</span>
+                                        <input class="form-control" id="directoryBindDn" type="text" autocomplete="username" placeholder="CN=GLPI Sync,OU=Service Accounts,DC=example,DC=local">
+                                    </label>
+                                    <label class="settings-field settings-field-wide">
+                                        <span>Bind password</span>
+                                        <div class="password-field">
+                                            <input class="form-control" id="directoryBindPassword" type="password" autocomplete="new-password" placeholder="Leave blank to keep the stored password">
+                                            <button type="button" class="btn-icon" onclick="toggleDirectoryPassword()" title="Show or hide password">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                        <small id="directoryPasswordStatus" class="settings-field-note">No password stored</small>
+                                    </label>
+                                    <label class="settings-field settings-field-wide">
+                                        <span>User search filter</span>
+                                        <textarea class="form-control settings-code-input" id="directoryUserFilter" rows="3">(&(objectClass=user)(objectCategory=person)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))</textarea>
+                                    </label>
+                                </div>
+
+                                <div class="settings-subsection">
+                                    <div class="settings-subsection-heading">
+                                        <div>
+                                            <h3>Security and transport</h3>
+                                            <p>Use StartTLS on port 389 or LDAPS on port 636 where supported.</p>
+                                        </div>
+                                    </div>
+                                    <div class="settings-option-grid">
+                                        <label class="settings-checkbox-card">
+                                            <input id="directoryUseTls" type="checkbox">
+                                            <span><strong>StartTLS</strong><small>Upgrade an LDAP connection to TLS</small></span>
+                                        </label>
+                                        <label class="settings-checkbox-card">
+                                            <input id="directoryUseLdaps" type="checkbox">
+                                            <span><strong>LDAPS</strong><small>Connect using the ldaps:// protocol</small></span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="settings-subsection">
+                                    <div class="settings-subsection-heading">
+                                        <div>
+                                            <h3>GLPI field mappings</h3>
+                                            <p>Defaults match GLPI’s Microsoft Active Directory preconfiguration.</p>
+                                        </div>
+                                    </div>
+                                    <div class="settings-form-grid mapping-grid">
+                                        <label class="settings-field"><span>Login field</span><input class="form-control" id="directoryLoginField" type="text" value="samaccountname"></label>
+                                        <label class="settings-field"><span>Synchronization field</span><input class="form-control" id="directorySyncField" type="text" value="objectguid"></label>
+                                        <label class="settings-field"><span>Email field</span><input class="form-control" id="directoryEmailField" type="text" value="mail"></label>
+                                        <label class="settings-field"><span>First name field</span><input class="form-control" id="directoryFirstNameField" type="text" value="givenname"></label>
+                                        <label class="settings-field"><span>Surname field</span><input class="form-control" id="directorySurnameField" type="text" value="sn"></label>
+                                        <label class="settings-field"><span>Phone field</span><input class="form-control" id="directoryPhoneField" type="text" value="telephonenumber"></label>
+                                        <label class="settings-field"><span>Mobile field</span><input class="form-control" id="directoryMobileField" type="text" value="mobile"></label>
+                                        <label class="settings-field"><span>Job title field</span><input class="form-control" id="directoryTitleField" type="text" value="title"></label>
+                                        <label class="settings-field"><span>Department field</span><input class="form-control" id="directoryDepartmentField" type="text" value="department"></label>
+                                        <label class="settings-field"><span>LDAP page size</span><input class="form-control" id="directoryPageSize" type="number" min="1" max="5000" value="1000"></label>
+                                    </div>
+                                </div>
+
+                                <div class="settings-action-bar">
+                                    <div id="directoryTestStatus" class="directory-status neutral">
+                                        <i class="fas fa-circle"></i>
+                                        <span>Connection has not been tested.</span>
+                                    </div>
+                                    <div class="settings-inline-actions">
+                                        <button class="btn-secondary" id="testDirectoryBtn" onclick="testDirectoryConnection()">
+                                            <i class="fas fa-plug-circle-check"></i> Test connection
+                                        </button>
+                                        <button class="btn-primary" id="previewDirectoryBtn" onclick="previewDirectoryUsers()">
+                                            <i class="fas fa-users-viewfinder"></i> Preview users
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div id="directoryPreviewSection" class="directory-preview-section" hidden>
+                                    <div class="section-heading">
+                                        <div><span class="eyebrow">Live directory result</span><h3>Active Directory users</h3></div>
+                                        <span class="card-meta" id="directoryPreviewCount">0 users</span>
+                                    </div>
+                                    <div class="table-container">
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Login</th>
+                                                    <th>Name</th>
+                                                    <th>Email</th>
+                                                    <th>Department</th>
+                                                    <th>Job title</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="directoryPreviewTable"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="settings-panel" data-settings-panel="sync">
+                                <div class="settings-section-heading">
+                                    <div>
+                                        <span class="eyebrow">Directory operations</span>
+                                        <h2>User synchronization</h2>
+                                        <p>Import and update users through GLPI’s native LDAP synchronization engine.</p>
+                                    </div>
+                                </div>
+
+                                <div class="sync-status-grid">
+                                    <div class="sync-status-card">
+                                        <span class="eyebrow">Directory</span>
+                                        <strong id="syncDirectoryStatus">Not configured</strong>
+                                        <small id="syncDirectoryDetail">Save and test the connection first.</small>
+                                    </div>
+                                    <div class="sync-status-card">
+                                        <span class="eyebrow">Last test</span>
+                                        <strong id="syncLastTest">Never</strong>
+                                        <small id="syncLastTestResult">No result recorded</small>
+                                    </div>
+                                    <div class="sync-status-card">
+                                        <span class="eyebrow">Last sync</span>
+                                        <strong id="syncLastRun">Never</strong>
+                                        <small id="syncLastRunResult">No synchronization recorded</small>
+                                    </div>
+                                    <div class="sync-status-card">
+                                        <span class="eyebrow">GLPI LDAP server</span>
+                                        <strong id="syncAuthLdapId">Not linked</strong>
+                                        <small>Native AuthLDAP configuration ID</small>
+                                    </div>
+                                </div>
+
+                                <div class="settings-form-grid">
+                                    <label class="settings-field">
+                                        <span>Deleted AD user action</span>
+                                        <select class="form-control" id="directoryDeletedStrategy">
+                                            <option value="0">Preserve in GLPI</option>
+                                            <option value="1">Move to trash</option>
+                                            <option value="2">Withdraw authorizations and groups</option>
+                                            <option value="3">Disable user</option>
+                                            <option value="4">Disable and withdraw authorizations/groups</option>
+                                            <option value="5">Disable and withdraw groups</option>
+                                        </select>
+                                    </label>
+                                    <label class="settings-field">
+                                        <span>GLPI AuthLDAP ID</span>
+                                        <input class="form-control" id="directoryAuthLdapId" type="number" min="0" value="0" placeholder="Created automatically">
+                                        <small class="settings-field-note">Links synchronization to GLPI’s native LDAP configuration.</small>
+                                    </label>
+                                </div>
+
+                                <div class="sync-actions-card">
+                                    <div>
+                                        <h3>Synchronize users now</h3>
+                                        <p>Creates new users and updates existing directory users in GLPI. Existing local GLPI accounts are not deleted.</p>
+                                    </div>
+                                    <div class="settings-inline-actions">
+                                        <button class="btn-secondary" id="syncUpdateBtn" onclick="syncDirectoryUsers('update')">
+                                            <i class="fas fa-user-pen"></i> Update existing
+                                        </button>
+                                        <button class="btn-secondary" id="syncCreateBtn" onclick="syncDirectoryUsers('create')">
+                                            <i class="fas fa-user-plus"></i> Create new
+                                        </button>
+                                        <button class="btn-primary" id="syncAllBtn" onclick="syncDirectoryUsers('all')">
+                                            <i class="fas fa-arrows-rotate"></i> Full synchronization
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div id="syncOutput" class="sync-output" hidden>
+                                    <div class="section-heading">
+                                        <div><span class="eyebrow">Command result</span><h3>Synchronization log</h3></div>
+                                    </div>
+                                    <pre id="syncOutputText"></pre>
+                                </div>
+                            </section>
+
+                            <section class="settings-panel" data-settings-panel="audit">
+                                <div class="settings-section-heading">
+                                    <div>
+                                        <span class="eyebrow">Administration security</span>
+                                        <h2>Protection and audit</h2>
+                                        <p>Sensitive directory credentials are handled only by the server.</p>
+                                    </div>
+                                </div>
+
+                                <div class="security-settings-grid">
+                                    <div class="security-card">
+                                        <i class="fas fa-lock"></i>
+                                        <div>
+                                            <strong>Encrypted bind password</strong>
+                                            <p>The Active Directory bind password is encrypted using AES-256-GCM before it is written to persistent storage.</p>
+                                        </div>
+                                    </div>
+                                    <div class="security-card">
+                                        <i class="fas fa-user-shield"></i>
+                                        <div>
+                                            <strong>Administrator-only access</strong>
+                                            <p>Settings endpoints require a GLPI profile with configuration administration rights.</p>
+                                        </div>
+                                    </div>
+                                    <div class="security-card">
+                                        <i class="fas fa-database"></i>
+                                        <div>
+                                            <strong>GLPI remains authoritative</strong>
+                                            <p>Directory users are imported into GLPI and retain GLPI profile, entity and permission controls.</p>
+                                        </div>
+                                    </div>
+                                    <div class="security-card">
+                                        <i class="fas fa-clock-rotate-left"></i>
+                                        <div>
+                                            <strong>Last configuration change</strong>
+                                            <p id="settingsAuditSummary">No changes recorded.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>

@@ -1,0 +1,78 @@
+<!-- Import View -->
+                <div id="importView" class="view">
+                    <div class="view-header"><h1>Import Assets</h1></div>
+                    <div class="import-section">
+                        <div class="import-card">
+                            <i class="fas fa-file-csv"></i>
+                            <h3>Import from CSV</h3>
+                            <p>Columns: Staff Assigned/Office, Location, Asset Type, Model, Serial No., Asset Tag, Year of Acquisition and Status.</p>
+                            <select id="importDefaultType" class="form-control">
+                                <option value="Computer">Default type: Computer</option>
+                                <option value="Monitor">Default type: Monitor</option>
+                                <option value="Printer">Default type: Printer</option>
+                                <option value="NetworkEquipment">Default type: Network</option>
+                                <option value="Phone">Default type: Phone</option>
+                                <option value="Peripheral">Default type: Peripheral</option>
+                                <option value="Rack">Default type: Rack</option>
+                                <option value="CartridgeItem">Default type: Cartridge</option>
+                                <option value="ConsumableItem">Default type: Consumable</option>
+                                <option value="Software">Default type: Software</option>
+                            </select>
+                            <input type="file" id="csvFileInput" accept=".csv" onchange="handleCSVUpload()" hidden>
+                            <div class="form-actions">
+                                <button class="btn-secondary" onclick="downloadImportTemplate()"><i class="fas fa-download"></i> Template</button>
+                                <button class="btn-primary" onclick="document.getElementById('csvFileInput').click()"><i class="fas fa-upload"></i> Select File</button>
+                            </div>
+                        </div>
+                        <div class="import-preview" id="importPreview" style="display: none;">
+                            <h3>Preview (<span id="importRowCount">0</span> rows)</h3>
+                            <div id="importValidation" class="import-validation"></div>
+                            <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                                <table class="data-table"><thead id="importPreviewHead"></thead><tbody id="importPreviewBody"></tbody></table>
+                            </div>
+                            <div id="importUserMappingSection" class="import-user-mapping-section" hidden>
+                                <div class="section-heading">
+                                    <div>
+                                        <span class="eyebrow">User resolution</span>
+                                        <h3>CSV assignee mapping</h3>
+                                        <p>Every staff name is checked against synchronized GLPI and Active Directory users before assets are created.</p>
+                                    </div>
+                                    <div class="import-mapping-summary">
+                                        <span class="mapping-summary matched"><strong id="importMatchedUsers">0</strong> matched</span>
+                                        <span class="mapping-summary office"><strong id="importOfficeAssignments">0</strong> offices</span>
+                                        <span class="mapping-summary ambiguous"><strong id="importAmbiguousUsers">0</strong> ambiguous</span>
+                                        <span class="mapping-summary unmatched"><strong id="importUnmatchedUsers">0</strong> unmatched</span>
+                                    </div>
+                                </div>
+
+                                <div class="settings-info-card import-directory-note">
+                                    <i class="fas fa-address-book"></i>
+                                    <div>
+                                        <strong>Directory-controlled users</strong>
+                                        <p>CSV files cannot create users. Unmatched names must first be synchronized from Active Directory or intentionally left unassigned.</p>
+                                    </div>
+                                </div>
+
+                                <div class="table-container">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>CSV staff / office</th>
+                                                <th>Resolution</th>
+                                                <th>GLPI user</th>
+                                                <th>Affected rows</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="importUserMappingBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div id="importResults" class="import-results"></div>
+                            <div class="form-actions">
+                                <button class="btn-secondary" onclick="cancelImport()">Cancel</button>
+                                <button class="btn-primary" id="confirmImportBtn" onclick="confirmImport()"><i class="fas fa-check"></i> Confirm</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>

@@ -1,0 +1,66 @@
+<!-- Software Matrix View -->
+<div id="softwareMatrixView" class="view">
+    <div class="view-header">
+        <div>
+            <span class="eyebrow">Organization-wide visibility</span>
+            <h1>Software Matrix</h1>
+        </div>
+        <button class="btn-secondary" onclick="loadSoftwareMatrix()">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+
+    <div class="inventory-page-kpi-grid software-kpi-grid">
+        <article class="inventory-page-kpi">
+            <span>Software Products</span>
+            <strong id="softwareTotalCount">-</strong>
+        </article>
+        <article class="inventory-page-kpi">
+            <span>Known Versions</span>
+            <strong id="softwareVersionCount">-</strong>
+        </article>
+        <article class="inventory-page-kpi healthy">
+            <span>Installations</span>
+            <strong id="softwareInstallationCount">-</strong>
+        </article>
+        <article class="inventory-page-kpi">
+            <span>Computers</span>
+            <strong id="softwareComputerCount">-</strong>
+        </article>
+    </div>
+
+    <div class="filters-bar inventory-health-filters">
+        <input
+            type="search"
+            id="softwareMatrixSearch"
+            placeholder="Search software, publisher, version or computer..."
+            oninput="renderSoftwareMatrix()"
+        >
+        <select
+            id="softwareMatrixCoverageFilter"
+            onchange="renderSoftwareMatrix()"
+        >
+            <option value="">All software</option>
+            <option value="multiple">Installed on multiple computers</option>
+            <option value="single">Installed on one computer</option>
+        </select>
+    </div>
+
+    <div class="table-container inventory-page-table software-matrix-table">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Software</th>
+                    <th>Publisher</th>
+                    <th>Versions</th>
+                    <th>Computers</th>
+                    <th>Installations</th>
+                    <th>Deployment details</th>
+                </tr>
+            </thead>
+            <tbody id="softwareMatrixTable"></tbody>
+        </table>
+    </div>
+
+    <p class="inventory-result-note" id="softwareMatrixResultNote"></p>
+</div>

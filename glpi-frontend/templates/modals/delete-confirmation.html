@@ -1,0 +1,13 @@
+<!-- Delete Modal -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header"><h2 id="deleteModalTitle">Confirm deletion</h2><button class="modal-close" onclick="closeModal('deleteModal')"><i class="fas fa-times"></i></button></div>
+            <div class="modal-body">
+                <p id="deleteMessage">Delete this item?</p>
+                <div class="form-actions">
+                    <button class="btn-secondary" onclick="closeModal('deleteModal')">Cancel</button>
+                    <button class="btn-danger" id="confirmDeleteBtn">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
