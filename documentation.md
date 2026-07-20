@@ -3,8 +3,9 @@
 **Technical Project Documentation**  
 **Repository:** `https://github.com/Felix273/GLPI.git`  
 **Primary branch:** `develop`  
-**Document baseline:** Commit `ce4f9b1`  
+**Document source baseline:** Commit `ccd180e`  
 **Implementation date:** 18 July 2026  
+**Documentation updated:** 20 July 2026  
 **Local operating system:** Ubuntu 24.04  
 **GLPI version:** 10.0.26  
 **GLPI Agent version used:** 1.17-1
@@ -31,7 +32,7 @@ Local services:
 | GLPI inventory endpoint | `http://127.0.0.1:8095/front/inventory.php` | Accepts GLPI Agent POST inventory |
 | GLPI Agent local HTTP service | Port `62354` | Agent local service, enabled by default in the pilot |
 
-The implementation was committed and pushed to GitHub on branch `develop` as commit `ce4f9b1`.
+The implementation was committed and pushed to GitHub on branch `develop`. The documentation source baseline before this update is commit `ccd180e`.
 
 ## 2. Scope and Objectives
 
@@ -46,6 +47,7 @@ The implementation was committed and pushed to GitHub on branch `develop` as com
 - Organization settings and directory integration scaffolding.
 - Native GLPI inventory enabled.
 - GLPI Agent pilot installed on Ubuntu.
+- Windows GLPI Agent download, checksum verification, graphical installation, silent installation and deployment procedures documented.
 - Agent status, inventory health, disk health, OS details and installed software shown in the custom frontend.
 - Runtime data and backups excluded from Git.
 
@@ -53,7 +55,7 @@ The implementation was committed and pushed to GitHub on branch `develop` as com
 
 - Permanent HTTPS hosting and domain.
 - Reverse proxy, TLS certificates and production firewall rules.
-- Organization-wide Windows/Linux agent packages.
+- Organization-wide endpoint deployment has not yet been executed. This document now includes repeatable Windows and Linux installation procedures for future rollout.
 - Centralized agent authentication/certificate strategy.
 - High availability, remote database backups and formal monitoring.
 - Software vulnerability/CVE intelligence and patch deployment.
@@ -189,6 +191,7 @@ Internal files now return HTTP 404, including:
 - Imported one operating system, three disks and 3,590 installed-software records.
 - Corrected software mapping to use `Item_SoftwareVersion -> SoftwareVersion -> Software`.
 - Added Inventory Health, Software Matrix and a computer-only Inventory tab.
+- Added a Windows x64 MSI download and deployment procedure for future pilot and organization-wide rollout.
 
 ### Phase 7 - Git cleanup and release
 
@@ -468,7 +471,319 @@ running task Inventory
 New inventory from <device-id> for server0
 ```
 
-## 13. Verifying Agent Data
+## 13. Installing GLPI Agent on Windows
+
+This section is written for a first-time Windows pilot and later organization-wide deployment. It documents the process; it does **not** mean a Windows rollout has already been performed.
+
+### 13.1 Choose the correct GLPI server address
+
+The value passed to `SERVER=` must be reachable **from the Windows computer**.
+
+| Scenario | Server value |
+|---|---|
+| GLPI and the agent are on the same Windows computer | `http://127.0.0.1:8095` |
+| Windows computer is separate but on the same LAN | `http://<GLPI-SERVER-LAN-IP>:8095` |
+| Hosted production system | `https://glpi.example.co.ke` |
+
+Do not use `127.0.0.1` on a different computer. On a remote Windows endpoint, `127.0.0.1` refers to that Windows endpoint—not the GLPI server.
+
+For the current Ubuntu-hosted local test, a separate Windows pilot would temporarily use the Ubuntu computer's reachable LAN address. After hosting, replace it with the permanent HTTPS domain.
+
+### 13.2 Windows requirements
+
+- Windows 10, Windows 11 or a supported Windows Server edition.
+- A 64-bit operating system for GLPI Agent 1.17.
+- Local administrator rights.
+- Network access from the Windows computer to the GLPI server.
+- Native inventory enabled in GLPI.
+- The official MSI package and its verified SHA256 checksum.
+- FusionInventory Agent removed first when this agent is replacing it.
+
+> Since GLPI Agent 1.8, current releases are distributed as 64-bit Windows installers. Very old 32-bit computers require a separately approved legacy strategy and should not receive the 1.17 x64 MSI.
+
+### 13.3 Official Windows installer used by this project
+
+Approved package for the current project baseline:
+
+```text
+File: GLPI-Agent-1.17-x64.msi
+Download: https://github.com/glpi-project/glpi-agent/releases/download/1.17/GLPI-Agent-1.17-x64.msi
+SHA256: db2661a14359931a2d14ed7268f9b90763da4f2bec97b5ed8d51b9bb655d730c
+```
+
+Before a future rollout, check the official release page. If a newer version is approved, update the filename, URL, checksum and commands together.
+
+### 13.4 Method A: graphical installation for the first pilot
+
+Use this method on the first Windows computer because it is easier to inspect each setting.
+
+1. Sign in to Windows using an administrator account.
+2. Download `GLPI-Agent-1.17-x64.msi` from the official URL above.
+3. Open **Command Prompt as Administrator**.
+4. Verify the downloaded file:
+
+```bat
+cd /d "%USERPROFILE%\Downloads"
+certutil -hashfile GLPI-Agent-1.17-x64.msi SHA256
+```
+
+5. Compare the displayed hash with:
+
+```text
+db2661a14359931a2d14ed7268f9b90763da4f2bec97b5ed8d51b9bb655d730c
+```
+
+6. Stop if the hashes do not match. Delete the file and download it again from the official release.
+7. Double-click the MSI and approve the User Account Control prompt.
+8. Use these settings in the installer. The exact screen wording may vary slightly:
+
+| Setting | Pilot value | Production value |
+|---|---|---|
+| Execution mode | Service | Service |
+| Server | Reachable local/LAN GLPI URL | Permanent HTTPS GLPI URL |
+| Tag | `WINDOWS-PILOT` | Site or department, for example `NAIROBI-FINANCE` |
+| Tasks/features | Agent and Inventory | Agent and Inventory unless more tasks are approved |
+| Run immediately | Yes | Yes |
+| Embedded HTTP server | Disable for inventory-only endpoints | Disable unless specifically required |
+
+9. Complete the installation.
+10. Continue with the verification steps in section 13.7.
+
+### 13.5 Method B: download from an elevated Command Prompt
+
+Use **Command Prompt (`cmd.exe`) as Administrator**, not PowerShell, for the installer workflow.
+
+```bat
+mkdir C:\GLPI-Agent-Install
+cd /d C:\GLPI-Agent-Install
+curl.exe -L -o GLPI-Agent-1.17-x64.msi "https://github.com/glpi-project/glpi-agent/releases/download/1.17/GLPI-Agent-1.17-x64.msi"
+certutil -hashfile GLPI-Agent-1.17-x64.msi SHA256
+```
+
+Confirm that the hash is exactly:
+
+```text
+db2661a14359931a2d14ed7268f9b90763da4f2bec97b5ed8d51b9bb655d730c
+```
+
+### 13.6 Method C: silent installation
+
+This is the recommended repeatable command after the graphical pilot succeeds.
+
+Open **Command Prompt as Administrator** and run:
+
+```bat
+cd /d C:\GLPI-Agent-Install
+
+msiexec.exe /i "GLPI-Agent-1.17-x64.msi" /quiet /norestart ^
+ SERVER="http://192.168.1.11:8095" ^
+ TAG="WINDOWS-PILOT" ^
+ RUNNOW=1 ^
+ EXECMODE=1 ^
+ ADDLOCAL=feat_AGENT ^
+ NO_HTTPD=1 ^
+ GLPI_VERSION=10.0.26 ^
+ /L*v "C:\GLPI-Agent-Install\install.log"
+```
+
+Important rules:
+
+- Replace `http://192.168.1.11:8095` with an address reachable from the Windows computer.
+- After hosting, use the permanent HTTPS domain, for example `https://glpi.example.co.ke`.
+- Change `WINDOWS-PILOT` to a useful site or department tag.
+- `EXECMODE=1` installs the agent as a Windows service.
+- `ADDLOCAL=feat_AGENT` installs the base agent and Inventory task.
+- `RUNNOW=1` requests an inventory immediately after installation.
+- `NO_HTTPD=1` disables the endpoint's embedded HTTP server because this project currently needs outbound inventory reporting only.
+- `/L*v` creates a detailed installer log for troubleshooting.
+- A caret (`^`) must be the final character on each continued line—do not add spaces after it.
+
+Production example:
+
+```bat
+msiexec.exe /i "GLPI-Agent-1.17-x64.msi" /quiet /norestart ^
+ SERVER="https://glpi.example.co.ke" ^
+ TAG="NAIROBI-FINANCE" ^
+ RUNNOW=1 ^
+ EXECMODE=1 ^
+ ADDLOCAL=feat_AGENT ^
+ NO_HTTPD=1 ^
+ GLPI_VERSION=10.0.26 ^
+ /L*v "C:\GLPI-Agent-Install\install.log"
+```
+
+Do not use `NO_SSL_CHECK=1` in production. Install a trusted certificate chain on the server and allow normal certificate validation.
+
+### 13.7 Verify the Windows installation
+
+Open **Command Prompt as Administrator**.
+
+Check the Windows service:
+
+```bat
+sc.exe query glpi-agent
+```
+
+Expected result: the service exists and its state is `RUNNING`.
+
+Check the installed version:
+
+```bat
+cd /d "C:\Program Files\GLPI-Agent"
+glpi-agent --version
+```
+
+Check the configured server and tag stored in the Windows registry:
+
+```bat
+reg.exe query "HKLM\SOFTWARE\GLPI-Agent" /v server
+reg.exe query "HKLM\SOFTWARE\GLPI-Agent" /v tag
+```
+
+Read the latest agent log:
+
+```bat
+type "C:\Program Files\GLPI-Agent\logs\glpi-agent.log"
+```
+
+Look for messages showing that the server supports the GLPI Agent protocol and that an inventory was submitted.
+
+### 13.8 Force a complete Windows inventory
+
+From an elevated Command Prompt:
+
+```bat
+cd /d "C:\Program Files\GLPI-Agent"
+glpi-agent -f --full
+```
+
+Then read the log again:
+
+```bat
+type "C:\Program Files\GLPI-Agent\logs\glpi-agent.log"
+```
+
+The `-f` option forces submission, while `--full` requests a full inventory instead of a partial update.
+
+### 13.9 Verify the Windows endpoint in GLPI and the custom frontend
+
+In native GLPI:
+
+1. Open **Assets -> Computers**.
+2. Find the Windows hostname.
+3. Confirm the serial number, UUID, operating system and last inventory date.
+4. Confirm the linked Agent record and its version/tag.
+5. Open the Software tab and confirm installed applications are present.
+6. Check antivirus information on Windows endpoints.
+
+In the enhanced frontend:
+
+1. Open **Inventory Health**.
+2. Confirm the endpoint is **Agent managed** and reports as healthy.
+3. Open the computer record.
+4. Select the **Inventory** tab.
+5. Confirm Agent, Windows version, disks, antivirus and installed software.
+6. Search for a known application to confirm software mapping.
+
+### 13.10 Simple reusable Windows deployment script
+
+Save the following as `install-glpi-agent.cmd`. Run it as Administrator or deploy it using an approved management platform.
+
+```bat
+@echo off
+setlocal
+
+set "MSI=C:\GLPI-Agent-Install\GLPI-Agent-1.17-x64.msi"
+set "GLPI_URL=https://glpi.example.co.ke"
+set "AGENT_TAG=NAIROBI-OFFICE"
+set "LOG=C:\GLPI-Agent-Install\install.log"
+
+if not exist "%MSI%" (
+    echo ERROR: Installer not found: %MSI%
+    exit /b 2
+)
+
+msiexec.exe /i "%MSI%" /quiet /norestart ^
+ SERVER="%GLPI_URL%" ^
+ TAG="%AGENT_TAG%" ^
+ RUNNOW=1 ^
+ EXECMODE=1 ^
+ ADDLOCAL=feat_AGENT ^
+ NO_HTTPD=1 ^
+ GLPI_VERSION=10.0.26 ^
+ /L*v "%LOG%"
+
+set "RESULT=%ERRORLEVEL%"
+
+if "%RESULT%"=="0" (
+    echo GLPI Agent installed successfully.
+    exit /b 0
+)
+
+if "%RESULT%"=="3010" (
+    echo GLPI Agent installed successfully; Windows restart is required.
+    exit /b 0
+)
+
+echo ERROR: GLPI Agent installation failed with code %RESULT%.
+echo Review %LOG%
+exit /b %RESULT%
+```
+
+For centralized deployment, place the verified MSI and script in a secured software-distribution location, then deploy with Group Policy, Microsoft Intune, an RMM platform or another approved endpoint-management tool.
+
+### 13.11 Safe rollout process for Windows computers
+
+1. Host GLPI on a stable HTTPS domain first.
+2. Freeze an approved GLPI Agent version and checksum.
+3. Test the installer manually on one Windows pilot.
+4. Test the silent command on a second pilot.
+5. Verify each pilot in native GLPI and the enhanced frontend.
+6. Pilot on 5-10 computers from different departments.
+7. Confirm no duplicate computers are created.
+8. Confirm operating system, disks, antivirus and software inventory.
+9. Deploy in controlled batches.
+10. Monitor **Inventory Health** for stale or never-reported computers.
+11. Keep the MSI, checksum, command and deployment log together as a release package.
+
+### 13.12 Windows troubleshooting
+
+| Problem | Check or resolution |
+|---|---|
+| MSI does not install | Run Command Prompt as Administrator and review `C:\GLPI-Agent-Install\install.log`. |
+| Service is missing | Confirm `EXECMODE=1`; rerun the installer and inspect the MSI log. |
+| Service exists but is stopped | Run `sc.exe start glpi-agent`, then check the agent log. |
+| No computer appears in GLPI | Confirm `SERVER=` is reachable from Windows, native inventory is enabled and the agent log shows a successful contact. |
+| `127.0.0.1` does not work | The GLPI server is on another computer. Use its LAN address or hosted HTTPS domain. |
+| Certificate error | Install a valid server certificate and trusted CA chain. Do not disable SSL verification in production. |
+| Software installed under user profiles is missing | Consider adding `SCAN_PROFILES=1` after testing the performance and privacy impact. |
+| Duplicate computer appears | Check hostname, serial number, UUID and cloning process. Avoid regenerating agent/device identity unnecessarily. |
+| Antivirus does not appear | Confirm Windows Security Center recognizes the antivirus product and run a full inventory. |
+| Inventory takes too long | Review excluded categories, profile scanning and the agent log before increasing timeouts. |
+
+### 13.13 Windows uninstall or reconfiguration
+
+Uninstall using the same approved MSI:
+
+```bat
+msiexec.exe /x "C:\GLPI-Agent-Install\GLPI-Agent-1.17-x64.msi" /quiet /norestart
+```
+
+To reapply configuration with the same installer:
+
+```bat
+msiexec.exe /i "C:\GLPI-Agent-Install\GLPI-Agent-1.17-x64.msi" /quiet /norestart ^
+ REINSTALL=feat_AGENT ^
+ SERVER="https://glpi.example.co.ke" ^
+ TAG="NAIROBI-OFFICE" ^
+ RUNNOW=1 ^
+ NO_HTTPD=1 ^
+ /L*v "C:\GLPI-Agent-Install\reconfigure.log"
+```
+
+Always test reconfiguration on a pilot before applying it to the organization.
+
+## 14. Verifying Agent Data
 
 ### Basic database verification
 
@@ -506,7 +821,7 @@ Validated pilot result:
 - Installed software relationships: 3,590
 - Software products: 3,330
 
-## 14. Software Inventory Relationship
+## 15. Software Inventory Relationship
 
 The correct native GLPI relationship is:
 
@@ -529,7 +844,7 @@ The custom backend resolves this into:
 
 The original prototype relationship `Computer_SoftwareVersion` was replaced with `Item_SoftwareVersion` for GLPI 10 compatibility.
 
-## 15. CSV Import Integration
+## 16. CSV Import Integration
 
 The exact template columns are:
 
@@ -548,7 +863,7 @@ Import protections include:
 - Final duplicate recheck immediately before import.
 - Confirmation disabled while blocking duplicates remain.
 
-## 16. Settings and Directory Integration
+## 17. Settings and Directory Integration
 
 Implemented settings include:
 
@@ -561,7 +876,7 @@ Implemented settings include:
 
 Before production, validate TLS for directory connections and store encryption keys outside the repository.
 
-## 17. Security Controls
+## 18. Security Controls
 
 ### Implemented
 
@@ -586,7 +901,7 @@ Before production, validate TLS for directory connections and store encryption k
 9. Implement scheduled backups and restore tests.
 10. Keep GLPI, images and agent versions patched.
 
-## 18. Testing and Quality Assurance
+## 19. Testing and Quality Assurance
 
 ### Syntax checks
 
@@ -630,7 +945,7 @@ browser="$(command -v google-chrome || command -v chromium || command -v chromiu
 - Confirm disk warning appears for the root volume when usage is above 80%.
 - Confirm non-computer assets do not show the Inventory tab.
 
-## 19. Git and GitHub Workflow
+## 20. Git and GitHub Workflow
 
 ### Current repository state
 
@@ -676,7 +991,7 @@ glpi-frontend/data/documents/*
 !glpi-frontend/data/documents/.gitkeep
 ```
 
-## 20. Backup and Restore
+## 21. Backup and Restore
 
 ### Source code
 
@@ -718,7 +1033,7 @@ tar czf "backups/frontend-runtime-$(date +%Y%m%d-%H%M%S).tar.gz" \
 - Start services and run smoke tests.
 - Perform scheduled restore drills, not only backups.
 
-## 21. Production Hosting Plan
+## 22. Production Hosting Plan
 
 ### Recommended architecture
 
@@ -752,7 +1067,7 @@ https://glpi.example.co.ke         Native GLPI and agent target
 11. Test certificate validation, inventory submission and frontend APIs.
 12. Configure monitoring, backups, retention and patching.
 
-## 22. Organization-Wide Agent Rollout
+## 23. Organization-Wide Agent Rollout
 
 Do not use `127.0.0.1` on remote endpoints. After hosting, every agent must target the permanent GLPI HTTPS URL.
 
@@ -775,16 +1090,17 @@ tag = NAIROBI-OFFICE
 
 ### Windows rollout process
 
-1. Obtain the official GLPI Agent Windows installer for the approved release.
-2. Create a silent installation command targeting the HTTPS GLPI URL.
-3. Include a site/department tag.
-4. Test on a small Windows pilot group.
-5. Deploy using Active Directory Group Policy, Intune, RMM or another software distribution platform.
-6. Confirm Windows Defender/antivirus records and installed software are reported.
+Use the complete download, checksum, graphical installation, silent installation, verification and troubleshooting procedure in **Section 13**.
 
-Exact Windows installer switches must be validated against the selected official installer version before mass deployment.
+1. Freeze an approved MSI version and SHA256 checksum.
+2. Test the graphical installation on one pilot.
+3. Test the silent command on another pilot.
+4. Use the permanent HTTPS GLPI URL and a meaningful site/department tag.
+5. Deploy using Active Directory Group Policy, Microsoft Intune, RMM or another approved software-distribution platform.
+6. Confirm Windows operating system, disks, antivirus and installed software are reported.
+7. Monitor Inventory Health and stop the rollout if duplicates, certificate failures or missing inventories appear.
 
-## 23. Operations and Maintenance
+## 24. Operations and Maintenance
 
 ### Daily
 
@@ -807,7 +1123,7 @@ Exact Windows installer switches must be validated against the selected official
 - Audit administrators, tokens and directory credentials.
 - Review data retention for documents and metadata.
 
-## 24. Troubleshooting
+## 25. Troubleshooting
 
 ### `escapeHtml is not defined`
 
@@ -865,7 +1181,7 @@ Confirm the backend uses `Item_SoftwareVersion`, not the obsolete prototype rela
 Cause: a command containing `exit 1` was run in the active shell.  
 Resolution: run checks in a subshell or use `|| true` while investigating.
 
-## 25. Current Local Baseline
+## 26. Current Local Baseline
 
 | Item | Value |
 |---|---|
@@ -880,14 +1196,14 @@ Resolution: run checks in a subshell or use `|| true` while investigating.
 | Pilot GLPI computer ID | 16 |
 | Pilot software records | 3,590 |
 | Git branch | `develop` |
-| Git commit | `ce4f9b1` |
+| Documentation source baseline | `ccd180e` |
 
-## 26. Recommended Next Enhancements
+## 27. Recommended Next Enhancements
 
 1. Production reverse proxy and HTTPS deployment.
 2. Production secret management and restricted CORS.
 3. Database-backed custom metadata instead of JSON files.
-4. Windows agent packaging and automated deployment.
+4. Execute and validate the documented Windows pilot, then package it for automated deployment.
 5. Agent compliance policies and required-software baselines.
 6. CVE/vulnerability feed integration.
 7. Patch and software deployment through approved GLPI capabilities.
@@ -895,7 +1211,7 @@ Resolution: run checks in a subshell or use `|| true` while investigating.
 9. Alerting for stale devices, disk thresholds and agent version drift.
 10. Automated CI checks for PHP, JavaScript, Docker and security scanning.
 
-## 27. Acceptance Checklist
+## 28. Acceptance Checklist
 
 - [x] Docker services run locally.
 - [x] Native GLPI is available on port 8095.
@@ -904,15 +1220,24 @@ Resolution: run checks in a subshell or use `|| true` while investigating.
 - [x] Internal files are protected from static access.
 - [x] Native GLPI inventory is enabled.
 - [x] Ubuntu pilot agent reports successfully.
+- [x] Windows x64 MSI download, checksum, installation and verification procedure documented.
 - [x] Agent, OS, disk and software data are visible in the frontend.
 - [x] Inventory Health and Software Matrix are implemented.
 - [x] Runtime data and backups are excluded from Git.
 - [x] Changes are committed and pushed to `develop`.
 - [ ] Permanent hosting and HTTPS are configured.
 - [ ] Production secrets and firewall rules are configured.
-- [ ] Windows/Linux organization-wide deployment packages are approved.
+- [ ] Windows pilot is executed and organization-wide Windows/Linux deployment packages are approved.
 - [ ] Backup restoration and disaster recovery are tested.
 
 ---
+
+## 29. Official GLPI Agent References
+
+- Official releases: `https://github.com/glpi-project/glpi-agent/releases`
+- Windows installer documentation: `https://glpi-agent.readthedocs.io/en/1.17/installation/windows-command-line.html`
+- GLPI Agent 1.17 documentation: `https://glpi-agent.readthedocs.io/en/1.17/`
+- Configuration documentation: `https://glpi-agent.readthedocs.io/en/1.17/configuration.html`
+- Command-line reference: `https://glpi-agent.readthedocs.io/en/1.17/man/glpi-agent.html`
 
 **Maintenance rule:** Update this document whenever architecture, ports, routes, environment variables, agent versions, deployment commands or security controls change.
