@@ -1,0 +1,51 @@
+<!-- Asset List View -->
+                <div id="assetListView" class="view">
+                    <div class="view-header">
+                        <h1 id="assetListTitle">Assets</h1>
+                        <div class="view-actions">
+                            <button class="btn-secondary" onclick="navigateTo('dashboard')"><i class="fas fa-arrow-left"></i> Back</button>
+                            <button class="btn-secondary" onclick="exportCurrentAssets()"><i class="fas fa-download"></i> Export</button>
+                            <button class="btn-primary" id="addAssetBtn"><i class="fas fa-plus"></i> Add</button>
+                        </div>
+                    </div>
+
+                    <div class="bulk-actions-bar" id="bulkActionsBar" style="display: none;">
+                        <span class="bulk-selection"><strong id="selectedCount">0</strong> selected</span>
+                        <button class="btn-secondary btn-sm" onclick="showAssignModal()"><i class="fas fa-user-plus"></i> Assign</button>
+                        <button class="btn-secondary btn-sm" onclick="bulkSetStatus(0)"><i class="fas fa-circle-check"></i> Available</button>
+                        <button class="btn-secondary btn-sm" onclick="bulkSetStatus(3)"><i class="fas fa-screwdriver-wrench"></i> Maintenance</button>
+                        <button class="btn-secondary btn-sm" onclick="exportSelectedAssets()"><i class="fas fa-download"></i> Export</button>
+                        <button class="btn-danger btn-sm" onclick="bulkDelete()"><i class="fas fa-trash"></i> Delete</button>
+                        <button class="btn-ghost btn-sm" onclick="clearSelection()">Clear</button>
+                    </div>
+
+                    <div class="filters-bar advanced-filters">
+                        <div class="filter-search"><i class="fas fa-search"></i><input type="text" id="searchFilter" placeholder="Search name, serial or inventory number" oninput="filterAssets()"></div>
+                        <select id="statusFilter" onchange="filterAssets()">
+                            <option value="">All statuses</option>
+                            <option value="0">Available</option><option value="1">Assigned</option><option value="2">Retired</option><option value="3">Maintenance</option>
+                        </select>
+                        <select id="assignmentFilter" onchange="filterAssets()"><option value="">Any assignment</option><option value="assigned">Assigned</option><option value="unassigned">Unassigned</option></select>
+                        <select id="locationFilter" onchange="filterAssets()"><option value="">All locations</option></select>
+                        <select id="warrantyFilter" onchange="filterAssets()"><option value="">Any warranty</option><option value="active">Active</option><option value="expiring">Expiring in 30 days</option><option value="expired">Expired</option><option value="unknown">Not recorded</option></select>
+                        <select id="sortFilter" onchange="filterAssets()"><option value="modified_desc">Recently modified</option><option value="name_asc">Name A–Z</option><option value="name_desc">Name Z–A</option><option value="status_asc">Status</option><option value="value_desc">Highest value</option></select>
+                        <select id="pageSizeFilter" onchange="changePageSize()"><option value="10">10 per page</option><option value="25">25 per page</option><option value="50">50 per page</option><option value="100">100 per page</option></select>
+                        <button class="btn-ghost filter-reset" onclick="resetAssetFilters()"><i class="fas fa-rotate-left"></i> Reset</button>
+                    </div>
+
+                    <div class="pagination-bar">
+                        <span id="paginationInfo"></span>
+                        <div class="pagination-controls">
+                            <button class="btn-icon" onclick="prevPage()" id="prevPageBtn"><i class="fas fa-chevron-left"></i></button>
+                            <span id="currentPageDisplay">1</span>
+                            <button class="btn-icon" onclick="nextPage()" id="nextPageBtn"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead><tr><th><input type="checkbox" id="headerCheckbox" onchange="toggleHeaderCheckbox()"></th><th>Name</th><th>Status</th><th>Type</th><th>Location</th><th>Value</th><th>Actions</th></tr></thead>
+                            <tbody id="assetTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>

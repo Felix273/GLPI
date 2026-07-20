@@ -1,0 +1,58 @@
+services:
+  glpi:
+    image: ${GLPI_IMAGE:-glpi/glpi:10.0.26}
+    container_name: glpi-docker
+    restart: unless-stopped
+    env_file:
+      - .env.glpi
+    ports:
+      - "${GLPI_PORT:-8095}:80"
+    volumes:
+      - glpi_data:/var/glpi
+      - /var/run/mysqld/mysqld.sock:/var/run/mysqld/mysqld.sock
+      - ./glpi-docker/php-socket.ini:/usr/local/etc/php/conf.d/zz-socket.ini:ro
+    healthcheck:
+      test: ["CMD-SHELL", "php -r '$$body=@file_get_contents(\"http://127.0.0.1/\"); exit($$body===false ? 1 : 0);'"]
+      interval: 20s
+      timeout: 8s
+      retries: 6
+      start_period: 45s
+    networks:
+      - glpi-network
+
+  frontend:
+    build:
+      context: ./glpi-frontend
+    env_file:
+      - .env.settings
+    image: ${FRONTEND_IMAGE:-glpi-frontend-local:1.1}
+    container_name: glpi-frontend
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      GLPI_BACKEND_URL: ${GLPI_BACKEND_URL:-http://glpi}
+    ports:
+      - "${FRONTEND_PORT:-8091}:80"
+    volumes:
+      - ./glpi-frontend:/app
+    depends_on:
+      glpi:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "php -r '$$data=@file_get_contents(\"http://127.0.0.1/backend/health\"); exit($$data===false ? 1 : 0);'"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - glpi-network
+
+volumes:
+  glpi_data:
+    external: true
+    name: ${GLPI_DATA_VOLUME:-5460f57d138e1c1d896b6ac3003fb99c9ccf0c85e60efdbe593d3d02bf736cf4}
+
+networks:
+  glpi-network:
+    external: true
+    name: ${GLPI_NETWORK:-glpi-network}

@@ -1,0 +1,122 @@
+# ===========================
+# Environment Variables
+# ===========================
+.env
+.env.*
+!.env.example
+
+# ===========================
+# Logs
+# ===========================
+*.log
+logs/
+*.out
+*.err
+
+# ===========================
+# Cache
+# ===========================
+cache/
+tmp/
+temp/
+
+# ===========================
+# PHP Dependencies
+# ===========================
+vendor/
+
+# ===========================
+# Node Dependencies
+# ===========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ===========================
+# Build Output
+# ===========================
+dist/
+build/
+
+# ===========================
+# IDE
+# ===========================
+.vscode/
+.idea/
+*.swp
+
+# ===========================
+# Operating System
+# ===========================
+.DS_Store
+Thumbs.db
+
+# ===========================
+# Database Dumps
+# ===========================
+*.sql
+*.sqlite
+*.sqlite3
+
+# ===========================
+# Archives
+# ===========================
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# ===========================
+# GLPI Runtime Files
+# ===========================
+glpi/files/_cache/
+glpi/files/_cron/
+glpi/files/_dumps/
+glpi/files/_graphs/
+glpi/files/_lock/
+glpi/files/_log/
+glpi/files/_pictures/
+glpi/files/_plugins/
+glpi/files/_rss/
+glpi/files/_sessions/
+glpi/files/_tmp/
+glpi/files/_uploads/
+
+# ===========================
+# Docker
+# ===========================
+docker-compose.override.yml
+
+# ===========================
+# Coverage
+# ===========================
+coverage/
+
+# ===========================
+# Miscellaneous
+# ===========================
+*.bak
+*.tmp
+.env.settings
+
+# ===========================
+# Local Backups and Checkpoints
+# ===========================
+*-backup-*/
+*-backups/
+*-checkpoint-*/
+*-archives-*/
+inventory-agent-backups/
+
+# ===========================
+# Frontend Runtime Data
+# ===========================
+glpi-frontend/data/settings.json
+glpi-frontend/data/metadata/*.json
+glpi-frontend/data/documents/*
+!glpi-frontend/data/metadata/.gitkeep
+!glpi-frontend/data/documents/.gitkeep
