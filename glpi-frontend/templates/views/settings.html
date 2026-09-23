@@ -16,6 +16,13 @@
                         </div>
                     </div>
 
+                    <div class="settings-overview" aria-label="Settings overview">
+                        <div class="settings-overview-card"><span class="settings-overview-icon"><i class="fas fa-building"></i></span><div><small>Organization</small><strong id="settingsOverviewOrganization">Not configured</strong><span id="settingsOverviewWorkspace">Workspace not set</span></div></div>
+                        <div class="settings-overview-card"><span class="settings-overview-icon"><i class="fas fa-sliders"></i></span><div><small>Interface defaults</small><strong id="settingsOverviewCurrency">KES</strong><span id="settingsOverviewTimezone">Africa/Nairobi</span></div></div>
+                        <div class="settings-overview-card"><span class="settings-overview-icon"><i class="fas fa-address-book"></i></span><div><small>Directory</small><strong id="settingsOverviewDirectory">Not configured</strong><span id="settingsOverviewDirectoryHost">LDAP connection</span></div></div>
+                        <div class="settings-overview-card settings-overview-save"><span class="settings-overview-icon"><i class="fas fa-cloud-check"></i></span><div><small>Configuration</small><strong id="settingsOverviewStatus">Ready to edit</strong><span>Changes apply after saving</span></div></div>
+                    </div>
+
                     <div id="settingsAccessMessage" class="settings-access-message" hidden>
                         <i class="fas fa-shield-halved"></i>
                         <div>
@@ -46,9 +53,48 @@
                                 <i class="fas fa-shield"></i>
                                 <span><strong>Security</strong><small>Audit and protection</small></span>
                             </button>
+                            <button class="settings-tab" data-settings-tab="logs" onclick="switchSettingsTab('logs')">
+                                <i class="fas fa-list-check"></i>
+                                <span><strong>Logs</strong><small>Activity history</small></span>
+                            </button>
+                            <button class="settings-tab" data-settings-tab="access" onclick="switchSettingsTab('access')">
+                                <i class="fas fa-user-lock"></i>
+                                <span><strong>User access</strong><small>Profiles and levels</small></span>
+                            </button>
+                            <button class="settings-tab" data-settings-tab="sidebar" onclick="switchSettingsTab('sidebar')">
+                                <i class="fas fa-grip-vertical"></i>
+                                <span><strong>Sidebar</strong><small>Navigation layout</small></span>
+                            </button>
                         </aside>
 
-                        <div class="settings-panels">
+                        <div id="settingsSkeleton" class="settings-skeleton" hidden>
+                            <div class="skeleton-section">
+                                <div class="skeleton skeleton-line wide"></div>
+                                <div class="skeleton skeleton-line"></div>
+                            </div>
+                            <div class="skeleton-section">
+                                <div class="skeleton skeleton-line wide"></div>
+                                <div class="skeleton skeleton-line"></div>
+                                <div class="skeleton skeleton-line"></div>
+                            </div>
+                            <div class="skeleton-section">
+                                <div class="skeleton skeleton-line wide"></div>
+                                <div class="skeleton skeleton-line"></div>
+                                <div class="skeleton skeleton-line"></div>
+                                <div class="skeleton skeleton-line"></div>
+                            </div>
+                        </div>
+
+                        <div id="settingsError" class="settings-error" hidden>
+                            <div class="empty-state">
+                                <i class="fas fa-triangle-exclamation"></i>
+                                <h3>Unable to load settings</h3>
+                                <p>There was a problem loading system settings. Try refreshing the page.</p>
+                                <button class="btn-secondary" onclick="loadSettingsPage(true)">Retry</button>
+                            </div>
+                        </div>
+
+                        <div class="settings-panels" id="settingsPanels" hidden>
                             <section class="settings-panel active" data-settings-panel="branding">
                                 <div class="settings-section-heading">
                                     <div>
@@ -144,6 +190,14 @@
                                             <option value="100">100</option>
                                         </select>
                                     </label>
+                                        <div class="settings-field settings-toggle-field">
+                                        <label class="settings-switch">
+                                            <input id="settingsLowStockAlerts" type="checkbox">
+                                            <span></span>
+                                            <strong>Low stock alerts</strong>
+                                        </label>
+                                        <small>Show warnings when stock items reach their reorder threshold.</small>
+                                        </div>
                                 </div>
 
                                 <div class="settings-info-card">
@@ -400,7 +454,83 @@
                                     </div>
                                 </div>
                             </section>
-                        </div>
+
+                            <section class="settings-panel" data-settings-panel="logs">
+                                <div class="settings-section-heading">
+                                    <div>
+                                        <span class="eyebrow">GLPI activity history</span>
+                                        <h2>System logs</h2>
+                                        <p>Review recent changes and actions recorded by GLPI. Logs are read-only here.</p>
+                                    </div>
+                                    <button class="btn-secondary btn-sm" onclick="loadSettingsLogs(true)"><i class="fas fa-rotate"></i> Refresh logs</button>
+                                </div>
+                                <div class="settings-log-toolbar">
+                                    <label class="settings-field"><span>Search logs</span><input class="form-control" id="settingsLogSearch" type="search" placeholder="User, item or action" oninput="filterSettingsLogs()"></label>
+                                    <label class="settings-field"><span>Show</span><select class="form-control" id="settingsLogLimit" onchange="loadSettingsLogs(true)"><option value="25">25 entries</option><option value="50">50 entries</option><option value="100">100 entries</option></select></label>
+                                </div>
+                                <div id="settingsLogsStatus" class="settings-inline-status" hidden></div>
+                                <div class="table-container settings-log-table-container">
+                                    <table class="data-table settings-log-table">
+                                        <thead><tr><th>Date</th><th>User</th><th>Action</th><th>Item</th><th>Details</th></tr></thead>
+                                        <tbody id="settingsLogsBody"><tr><td colspan="5"><div class="empty-state compact"><i class="fas fa-clock-rotate-left"></i><p>Select Logs to load activity.</p></div></td></tr></tbody>
+                                    </table>
+                                </div>
+                            </section>
+
+                            <section class="settings-panel" data-settings-panel="access">
+                                <div class="settings-section-heading">
+                                    <div>
+                                        <span class="eyebrow">GLPI authorization</span>
+                                        <h2>User access levels</h2>
+                                        <p>Assign native GLPI profiles to user accounts. Profiles determine what each user can view and change.</p>
+                                    </div>
+                                    <button class="btn-secondary btn-sm" onclick="loadSettingsAccess(true)"><i class="fas fa-rotate"></i> Refresh users</button>
+                                </div>
+                                <div class="access-level-guide">
+                                    <i class="fas fa-circle-info"></i>
+                                    <div><strong>Use least privilege</strong><p>Keep ordinary users on Self-Service or Observer. Reserve Technician, Supervisor and Super-Admin access for trusted staff who need those capabilities.</p></div>
+                                </div>
+                                <div class="settings-access-toolbar"><label class="settings-field"><span>Search users</span><input class="form-control" id="settingsAccessSearch" type="search" placeholder="Name, login or email" oninput="filterSettingsAccess()"></label><span id="settingsAccessStatus" class="settings-inline-status" hidden></span></div>
+                                <div class="table-container settings-access-table-container">
+                                    <table class="data-table settings-access-table">
+                                        <thead><tr><th>User</th><th>Login</th><th>Account</th><th>Access level</th><th>Change</th></tr></thead>
+                                        <tbody id="settingsAccessBody"><tr><td colspan="5"><div class="empty-state compact"><i class="fas fa-users"></i><p>Select User access to load accounts.</p></div></td></tr></tbody>
+                                    </table>
+                                </div>
+                            </section>
+
+                            <section class="settings-panel" data-settings-panel="sidebar">
+                                <div class="settings-section-heading">
+                                    <div>
+                                        <span class="eyebrow">Navigation</span>
+                                        <h2>Sidebar navigation</h2>
+                                        <p>Choose which items and groups appear in the application sidebar. Drag to reorder, toggle visibility, or restore defaults.</p>
+                                    </div>
+                                    <div class="settings-inline-actions">
+                                        <button class="btn-secondary btn-sm" onclick="restoreDefaultSidebar()">
+                                            <i class="fas fa-rotate"></i> Restore defaults
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="sidebar-editor-toolbar">
+                                    <label class="settings-field settings-toggle-field">
+                                        <span>Show group titles</span>
+                                        <label class="settings-switch">
+                                            <input id="sidebarShowGroupTitles" type="checkbox" onchange="saveSidebarGroupTitles()">
+                                            <span></span>
+                                        </label>
+                                    </label>
+                                </div>
+
+                                <div class="sidebar-editor-info">
+                                    <i class="fas fa-info-circle"></i>
+                                    <div><small><strong>Hidden items</strong> are saved but do not appear in the sidebar. Items nested inside a hidden group are also hidden.</small></div>
+                                </div>
+
+                                <ul id="sidebarEditor" class="sidebar-editor" aria-label="Sidebar navigation order">
+                                </ul>
+                            </section>
                     </div>
                 </div>
 
