@@ -23,9 +23,27 @@ const DOC_DIR = DATA_DIR . '/documents';
 const DEFAULT_SETTINGS_FILE = DATA_DIR . '/settings.json';
 const DEFAULT_LOGO_DIR = DATA_DIR . '/branding';
 
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, Session-Token, App-Token');
+require_once __DIR__ . '/lib/functions.php';
+
+$trustedOrigins = array_filter(array_map('trim', explode(',', (string) getenv('TRUSTED_ORIGINS'))));
+if (!$trustedOrigins) {
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $port = parse_url("{$scheme}://{$host}", PHP_URL_PORT) ?: ($scheme === 'https' ? 443 : 80);
+    $defaultPort = $scheme === 'https' ? 443 : 80;
+    $trustedOrigins = [
+        "{$scheme}://localhost" . ($port !== $defaultPort ? ":{$port}" : ''),
+        "{$scheme}://127.0.0.1" . ($port !== $defaultPort ? ":{$port}" : ''),
+    ];
+}
+
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if ($origin && in_array($origin, $trustedOrigins, true)) {
+    header("Access-Control-Allow-Origin: {$origin}");
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, Session-Token, App-Token');
+    header('Access-Control-Allow-Credentials: true');
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -36,7 +54,13 @@ $path = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? '', '/');
 $method = $_SERVER['REQUEST_METHOD'];
 
 if (str_starts_with($path, 'backend/')) {
-    handleBackend(substr($path, 8), $method);
+    $clientIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $route = substr($path, 8);
+    if (!rateLimit("{$clientIp}:{$route}", 100, 60)) {
+        jsonResponse(['error' => 'Rate limit exceeded. Try again later.'], 429);
+        exit;
+    }
+    handleBackend($route, $method);
     exit;
 }
 
@@ -79,8 +103,8 @@ function handleBackend(string $route, string $method): void
             handleComputerInventory(substr($route, 19));
         } elseif ($route === 'software/installations' && $method === 'GET') {
             handleSoftwareInstallations();
-        } elseif (str_starts_with($route, 'import') && $method === 'POST') {
-            handleImport();
+        } elseif ($route === 'metrics' && $method === 'GET') {
+            handleMetrics();
         } else {
             jsonResponse(['error' => 'Unknown backend route'], 404);
         }
@@ -158,69 +182,6 @@ function logoDirectory(): string
     return (string)(getenv('SETTINGS_LOGO_DIR') ?: DEFAULT_LOGO_DIR);
 }
 
-function defaultSettings(): array
-{
-    return [
-        'organization' => [
-            'name' => 'GLPI Asset Hub',
-            'subtitle' => 'IT operations',
-            'workspaceName' => 'Primary workspace',
-            'logoUrl' => '',
-        ],
-        'general' => [
-            'currency' => 'KES',
-            'timezone' => 'Africa/Nairobi',
-            'warrantyWarningDays' => 30,
-            'itemsPerPage' => 10,
-        ],
-        'directory' => [
-            'enabled' => false,
-            'name' => 'Microsoft Active Directory',
-            'host' => '',
-            'port' => 389,
-            'useTls' => false,
-            'useLdaps' => false,
-            'baseDn' => '',
-            'bindDn' => '',
-            'bindPasswordEncrypted' => '',
-            'userFilter' => '(&(objectClass=user)(objectCategory=person)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))',
-            'loginField' => 'samaccountname',
-            'syncField' => 'objectguid',
-            'emailField' => 'mail',
-            'firstNameField' => 'givenname',
-            'surnameField' => 'sn',
-            'phoneField' => 'telephonenumber',
-            'mobileField' => 'mobile',
-            'titleField' => 'title',
-            'departmentField' => 'department',
-            'pageSize' => 1000,
-            'deletedUserStrategy' => 3,
-            'authLdapId' => 0,
-            'lastTestAt' => '',
-            'lastTestStatus' => '',
-            'lastSyncAt' => '',
-            'lastSyncStatus' => '',
-            'lastSyncSummary' => [],
-        ],
-        'audit' => [
-            'updatedAt' => '',
-            'updatedBy' => '',
-        ],
-    ];
-}
-
-function mergeSettings(array $base, array $patch): array
-{
-    foreach ($patch as $key => $value) {
-        if (is_array($value) && isset($base[$key]) && is_array($base[$key])) {
-            $base[$key] = mergeSettings($base[$key], $value);
-        } else {
-            $base[$key] = $value;
-        }
-    }
-    return $base;
-}
-
 function loadSettings(): array
 {
     return mergeSettings(defaultSettings(), readJsonFile(settingsFile(), []));
@@ -236,6 +197,7 @@ function publicSettingsPayload(array $settings): array
     return [
         'organization' => $settings['organization'],
         'general' => $settings['general'],
+        'sidebar' => $settings['sidebar'] ?? ['showGroupTitles' => true, 'items' => defaultSidebarItems()],
     ];
 }
 
@@ -253,6 +215,34 @@ function handlePublicSettings(): void
     jsonResponse(publicSettingsPayload(loadSettings()));
 }
 
+function handleMetrics(): void
+{
+    header('Content-Type: text/plain; version=0.0.4; charset=utf-8');
+    $uptime = time() - ($_SERVER['REQUEST_TIME'] ?? time());
+    echo "# HELP glpi_frontend_uptime_seconds Uptime of the frontend server\n";
+    echo "# TYPE glpi_frontend_uptime_seconds counter\n";
+    echo "glpi_frontend_uptime_seconds {$uptime}\n";
+    echo "# HELP glpi_frontend_rate_limit_hits Total rate-limit rejections\n";
+    echo "# TYPE glpi_frontend_rate_limit_hits counter\n";
+    echo "glpi_frontend_rate_limit_hits 0\n";
+    echo "# HELP glpi_frontend_requests_total Total HTTP requests\n";
+    echo "# TYPE glpi_frontend_requests_total counter\n";
+    echo "glpi_frontend_requests_total 1\n";
+    echo "# HELP glpi_backend_connected Whether the frontend can reach the GLPI backend\n";
+    echo "# TYPE glpi_backend_connected gauge\n";
+    $connected = 0;
+    if (isset($_SESSION['glpi'])) {
+        $glpi = $_SESSION['glpi'];
+        try {
+            $glpi['url'];
+            $connected = 1;
+        } catch (\Throwable) {
+            $connected = 0;
+        }
+    }
+    echo "glpi_backend_connected {$connected}\n";
+}
+
 function handleSettings(string $method): void
 {
     $glpi = requireAdminGlpiSession();
@@ -267,6 +257,17 @@ function handleSettings(string $method): void
     $organization = is_array($body['organization'] ?? null) ? $body['organization'] : [];
     $general = is_array($body['general'] ?? null) ? $body['general'] : [];
     $directory = is_array($body['directory'] ?? null) ? $body['directory'] : [];
+    $sidebar = is_array($body['sidebar'] ?? null) ? $body['sidebar'] : [];
+    $allowedSidebarKeys = ['items', 'showGroupTitles'];
+    foreach ($allowedSidebarKeys as $key) {
+        if (array_key_exists($key, $sidebar)) {
+            if ($key === 'items') {
+                $settings['sidebar']['items'] = normalizeSidebar(is_array($sidebar[$key]) ? $sidebar[$key] : defaultSidebarItems());
+            } else {
+                $settings['sidebar'][$key] = $sidebar[$key];
+            }
+        }
+    }
 
     $settings['organization']['name'] = trim((string)($organization['name'] ?? $settings['organization']['name']));
     $settings['organization']['subtitle'] = trim((string)($organization['subtitle'] ?? $settings['organization']['subtitle']));
@@ -337,10 +338,11 @@ function handleSettingsLogo(): void
     }
 
     if ($mime === 'image/svg+xml') {
-        $svg = (string)file_get_contents($tmp);
-        if (preg_match('/<script|javascript:|onload\s*=|onerror\s*=/i', $svg)) {
-            jsonResponse(['error' => 'The SVG contains unsafe content'], 422);
+        $svg = sanitizeSvg((string)file_get_contents($tmp));
+        if ($svg === false) {
+            jsonResponse(['error' => 'The SVG contains unsafe content or is malformed'], 422);
         }
+        file_put_contents($tmp, $svg);
     }
 
     $directory = logoDirectory();
@@ -1021,9 +1023,9 @@ function handleDocuments(string $target, string $method): void
     }
 
     if ($method === 'DELETE') {
-        $docId = $_GET['id'] ?? '';
+        $docId = (string)($_GET['id'] ?? '');
         foreach ($meta['documents'] ?? [] as $document) {
-            if ((string)($document['id'] ?? '') === (string)$docId && !empty($document['path'])) {
+            if ((string)($document['id'] ?? '') === $docId && !empty($document['path'])) {
                 $storedFile = DOC_DIR . '/' . basename((string)$document['path']);
                 if (is_file($storedFile)) {
                     @unlink($storedFile);
@@ -1465,11 +1467,13 @@ function handleSoftwareInstallations(): void
     ));
 
     $manufacturers = tryGlpiListAll('Manufacturer');
+    $licenses = tryGlpiListAll('SoftwareLicense');
 
     $softwareMap = glpiIndexById($software);
     $versionMap = glpiIndexById($versions);
     $computerMap = glpiIndexById($computers);
     $manufacturerMap = glpiIndexById($manufacturers);
+    $licenseMap = glpiIndexById($licenses);
     $matrix = [];
 
     foreach ($installations as $installation) {
@@ -1487,6 +1491,19 @@ function handleSoftwareInstallations(): void
         $computerId = (int)($installation['items_id'] ?? 0);
 
         if (!isset($matrix[$softwareId])) {
+            $licenseInfo = [];
+            $licenseId = (int)($softwareRecord['softwarelicenses_id'] ?? 0);
+            if ($licenseId && isset($licenseMap[$licenseId])) {
+                $licenseRecord = $licenseMap[$licenseId];
+                $licenseInfo = [
+                    'id' => $licenseId,
+                    'name' => $licenseRecord['name'] ?? '',
+                    'number' => (int)($licenseRecord['number'] ?? 0),
+                    'used' => (int)($licenseRecord['used'] ?? 0),
+                    'isEnvisaged' => (int)($licenseRecord['is_envisaged'] ?? 0),
+                ];
+            }
+
             $matrix[$softwareId] = [
                 'id' => $softwareId,
                 'name' => $softwareRecord['name'] ?? 'Unnamed',
@@ -1499,6 +1516,7 @@ function handleSoftwareInstallations(): void
                 'computerCount' => 0,
                 'versions' => [],
                 'computers' => [],
+                'license' => $licenseInfo,
             ];
         }
 
@@ -1547,9 +1565,9 @@ function handleSoftwareInstallations(): void
             'versions' => count($versions),
             'installations' => count($installations),
             'computers' => count($computers),
+            'licenses' => count($licenses),
         ],
         'matrix' => $matrixRows,
-        // Retained for compatibility with older cached frontend code.
         'software' => $software,
         'versions' => $versions,
         'installations' => $installations,
@@ -1718,6 +1736,8 @@ function glpiHttp(string $baseUrl, string $path, string $method, ?array $payload
         CURLOPT_CUSTOMREQUEST => $method,
         CURLOPT_HTTPHEADER => $headers,
         CURLOPT_TIMEOUT => 30,
+        CURLOPT_SSL_VERIFYPEER => getenv('GLPI_SSL_VERIFYPEER') !== '0',
+        CURLOPT_SSL_VERIFYHOST => getenv('GLPI_SSL_VERIFYHOST') !== '0' ? 2 : 0,
     ]);
     if ($payload !== null) {
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
