@@ -269,6 +269,14 @@ class Config extends CommonDBTM
             );
         }
 
+        if (isset($input['_update_menu_item_types'])) {
+            $input['menu_item_types'] = exportArrayToDB(
+                isset($input['menu_item_types'])
+                    ? ArrayNormalizer::normalizeValues($input['menu_item_types'], 'strval')
+                    : []
+            );
+        }
+
         // lock mechanism update
         if (isset($input['lock_use_lock_item'])) {
             $input['lock_item_list'] = exportArrayToDB(
@@ -3084,6 +3092,10 @@ HTML;
             $CFG_GLPI['devices_in_menu'] = importArrayFromDB($CFG_GLPI['devices_in_menu']);
         }
 
+        if (isset($CFG_GLPI['menu_item_types'])) {
+            $CFG_GLPI['menu_item_types'] = importArrayFromDB($CFG_GLPI['menu_item_types']);
+        }
+
         if (isset($CFG_GLPI['lock_item_list'])) {
             $CFG_GLPI['lock_item_list'] = importArrayFromDB($CFG_GLPI['lock_item_list']);
         }
@@ -3797,6 +3809,12 @@ HTML;
         // If the `devices_in_menu` option changed, we should regenerate the menu (unless we are in debug mode where it is always regenerated)
         if ($this->fields['name'] === 'devices_in_menu' && $_SESSION['glpi_use_mode'] !== Session::DEBUG_MODE) {
             $CFG_GLPI['devices_in_menu'] = json_decode($this->fields['value']) ?? [];
+            Html::generateMenuSession(true);
+        }
+
+        // If the `menu_item_types` option changed, we should regenerate the menu (unless we are in debug mode where it is always regenerated)
+        if ($this->fields['name'] === 'menu_item_types' && $_SESSION['glpi_use_mode'] !== Session::DEBUG_MODE) {
+            $CFG_GLPI['menu_item_types'] = json_decode($this->fields['value']) ?? [];
             Html::generateMenuSession(true);
         }
 

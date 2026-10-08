@@ -142,6 +142,24 @@
 
 <div class="row ps-4">
 
+    {% set menu_rand = random() %}
+    {% set id_menu_item_types = 'menu_item_types_' ~ menu_rand %}
+    {{ fields.dropdownArrayField(
+        'menu_item_types',
+        '',
+        call("Html::getMenuItemTypesForDropdown"),
+        __('Items displayed in sidebar'),
+        field_options|merge({
+            'multiple': true,
+            'size': 8,
+            'width': 'auto',
+            'values': config['menu_item_types']|default([]),
+            'rand': menu_rand,
+        })
+    ) }}
+
+    <input type='hidden' name='_update_menu_item_types' value='1'>
+
     {{ fields.numberField(
         'dropdown_max',
         config['dropdown_max'],

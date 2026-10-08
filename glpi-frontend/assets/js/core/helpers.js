@@ -40,6 +40,9 @@ function readStockForm() {
         relatedItem: document.getElementById('assetRelatedItem')?.value || ''
     };
 }
+function readPCIDForm() {
+    return document.getElementById('assetPCID')?.value.trim() || '';
+}
 function fillFinancialForm(financial) {
     setValueIfPresent('assetPurchaseDate', financial.purchaseDate || '');
     setValueIfPresent('assetPurchaseValue', financial.value || '');
@@ -47,6 +50,9 @@ function fillFinancialForm(financial) {
     setValueIfPresent('assetWarrantyExpiry', financial.warrantyExpiry || '');
     setValueIfPresent('assetSupplier', financial.supplier || '');
     setValueIfPresent('assetOrderNumber', financial.orderNumber || '');
+}
+function fillPCIDForm(value = '') {
+    setValueIfPresent('assetPCID', value || '');
 }
 function fillStockForm(stock) {
     setValueIfPresent('assetStockQuantity', stock.quantity || '');
@@ -76,6 +82,11 @@ function importMetadataFromRow(data) {
         assetTag: data.otherserial || '',
         model: data.model || '',
         modelNo: data.model_no || '',
+        category: data.asset_category || data.category || '',
+        processor: data.processor || '',
+        ramInstalled: data.ram_installed || '',
+        operatingSystem: data.operating_system || '',
+        officeSuite: data.office_suite || '',
         category: data.category || '',
         location: data.locations_id || data.location || '',
         defaultLocation: data.default_location || '',
@@ -84,6 +95,10 @@ function importMetadataFromRow(data) {
         mappedUserId: Number(data.import_user_id) > 0 ? Number(data.import_user_id) : 0,
         userResolution: data.import_user_resolution || '',
         acquisitionYear: data.acquisition_year || '',
+        lifespan: data.lifespan || '',
+        status: data.status || '',
+        assetCondition: data.asset_condition || '',
+        commentIssue: data.comment || '',
         sourceAssetType: data.itemtype || '',
         checkoutDate: data.checkout_date || '',
         createdAt: data.created_at || '',
@@ -154,15 +169,38 @@ function getInventoryBadge(status) {
 function showModal(id) { document.getElementById(id).classList.add('show'); }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 window.closeModal = closeModal;
-function showToast(msg, type = 'info') {
+function showToast(msg, type = 'info', target = null) {
     const toast = document.getElementById('toast');
-    document.getElementById('toastMessage').textContent = msg;
+    const toastMessage = document.getElementById('toastMessage');
+    if (!toast || !toastMessage) return;
+
+    toastMessage.textContent = msg;
     toast.className = `toast show ${type}`;
-    setTimeout(() => toast.classList.remove('show'), 3000);
+    toast.classList.toggle('clickable', Boolean(target));
+    toast.title = target ? 'Open item' : '';
+
+    if (target && typeof window !== 'undefined' && typeof window.openAlertTarget === 'function') {
+        toast.onclick = () => {
+            window.openAlertTarget(target);
+            toast.classList.remove('show');
+        };
+    } else if (target && typeof openAlertTarget === 'function') {
+        toast.onclick = () => {
+            openAlertTarget(target);
+            toast.classList.remove('show');
+        };
+    } else {
+        toast.onclick = null;
+    }
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+        toast.onclick = null;
+    }, 3000);
 }
 window.showToast = showToast;
 function formatDate(d) { return d ? new Date(d).toLocaleDateString() : 'N/A'; }
-function refreshAll() { state.currentView === 'dashboard' ? loadDashboard() : state.currentAssetType ? loadAssetList(state.currentAssetType) : showToast('Refreshed', 'success'); }
+function refreshAll() { state.currentView === 'dashboard' ? loadDashboard() : state.currentView === 'licenses' ? loadSlaLicences() : state.currentAssetType ? loadAssetList(state.currentAssetType) : showToast('Refreshed', 'success'); }
 window.refreshAll = refreshAll;
 window.refreshDashboard = (...args) => loadDashboard(...args);
 window.globalSearch = handleGlobalSearch;

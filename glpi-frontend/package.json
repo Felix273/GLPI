@@ -1,0 +1,22 @@
+{
+  "name": "glpi-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "vitest run && node tests/backend-access.mjs",
+    "test:e2e": "node tests/e2e/authenticated.mjs",
+    "test:ui": "vitest --ui",
+    "preview": "vite preview",
+    "lint": "node --check main.js && find assets/js -type f -name '*.js' -print0 | xargs -0 -n1 node --check"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "dependencies": {
+    "playwright": "^1.63.0",
+    "puppeteer-core": "^25.11.0"
+  }
+}

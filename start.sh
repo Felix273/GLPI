@@ -13,6 +13,20 @@
 set -euo pipefail
 
 ROOT="/home/felix/FENTECH PROJECTS/GLPI"
+ENV_FILE="$ROOT/.env.glpi"
+
+if [ -f "$ENV_FILE" ]; then
+  set -a
+  . "$ENV_FILE"
+  set +a
+fi
+
+# Local PHP development uses the host MariaDB/MySQL service, not the Docker db name.
+export GLPI_DB_HOST="localhost"
+export GLPI_DB_USER="${GLPI_DB_USER:-glpi}"
+export GLPI_DB_PASSWORD="${GLPI_DB_PASSWORD:-glpi12345}"
+export GLPI_DB_NAME="${GLPI_DB_NAME:-glpi}"
+
 GLPI_PUBLIC="$ROOT/glpi/public"
 FRONTEND="$ROOT/glpi-frontend"
 GLPI_PORT=8099

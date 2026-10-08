@@ -8,6 +8,9 @@
         <button class="btn-secondary" onclick="loadInventoryHealth()">
             <i class="fas fa-sync-alt"></i> Refresh
         </button>
+        <button class="btn-secondary" onclick="exportInventoryHealth()">
+            <i class="fas fa-file-csv"></i> Export CSV
+        </button>
     </div>
 
     <div class="inventory-page-kpi-grid">
@@ -50,7 +53,8 @@
         >
             <option value="">All health states</option>
             <option value="healthy">Healthy</option>
-            <option value="stale">Stale</option>
+            <option value="aging">Aging (7-14 days)</option>
+            <option value="stale">Stale (14+ days)</option>
             <option value="never">Never reported</option>
         </select>
         <select
@@ -67,13 +71,13 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Computer</th>
-                    <th>Serial</th>
-                    <th>Agent</th>
-                    <th>Version</th>
-                    <th>Last Contact</th>
-                    <th>Last Inventory</th>
-                    <th>Status</th>
+                    <th onclick="toggleSort('inventoryHealth','name')"><a href="#">Computer</a></th>
+                    <th onclick="toggleSort('inventoryHealth','serial')"><a href="#">Serial</a></th>
+                    <th onclick="toggleSort('inventoryHealth','agentName')"><a href="#">Agent</a></th>
+                    <th onclick="toggleSort('inventoryHealth','agentVersion')"><a href="#">Version</a></th>
+                    <th onclick="toggleSort('inventoryHealth','lastContact')"><a href="#">Last Contact</a></th>
+                    <th onclick="toggleSort('inventoryHealth','lastInventory')"><a href="#">Last Inventory</a></th>
+                    <th onclick="toggleSort('inventoryHealth','status')"><a href="#">Status</a></th>
                     <th>Actions</th>
                 </tr>
             </thead>

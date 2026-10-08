@@ -135,12 +135,29 @@ window.confirmImport = async function() {
         } catch (error) {
             results.push({ row: index + 2, status: 'failed', name: data.name || '(blank)', itemtype: resolveImportItemType(data), error: error.message });
             failed++;
+            if (window.GLPIImportFormat.shouldStopImportAfterError(error)) {
+                for (let pending = index + 1; pending < state.importData.length; pending++) {
+                    const pendingRow = state.importData[pending];
+                    results.push({
+                        row: pending + 2,
+                        status: 'failed',
+                        name: pendingRow.name || '(blank)',
+                        itemtype: resolveImportItemType(pendingRow),
+                        error: `Not attempted after an authorization or service error in row ${index + 2}`
+                    });
+                    failed++;
+                }
+                break;
+            }
         }
     }
     renderImportResults(results);
     showToast(`Complete: ${success} ok, ${failed} failed`, failed > 0 ? 'error' : 'success');
     button.disabled = false;
     button.innerHTML = '<i class="fas fa-check"></i> Confirm';
+    if (failed > 0) {
+        addAlert('Import failures', `${failed} row(s) failed to import into GLPI`, 'danger', 'import-failed');
+    }
     if (success > 0) {
         state.currentAssetType ? await loadAssetList(state.currentAssetType) : await loadDashboard();
     }
@@ -148,11 +165,11 @@ window.confirmImport = async function() {
 
 window.downloadImportTemplate = function() {
     const rows = [
-        ['STAFF ASSIGNED/OFFICE', 'LOCATION', 'ASSET TYPE', 'MODEL', 'SERIAL NO.', 'ASSET TAG', 'YEAR OF ACQUISITION', 'STATUS'],
-        ['4TH FLOOR - ICT SWITCH ROOM', '4TH FLOOR - ICT SWITCH ROOM', 'Access Point', 'AP4051DN', '21500830893GK7000267', 'KUCCPS:CO: 19:498', '2019', 'ACTIVE-IN USE'],
-        ['CALL CENTRE', 'CALL CENTRE', 'Access Point', 'UAP', '5CD2127T22', 'KUCCPS:CO:19:729', '2015', 'ACTIVE-IN USE']
+        ['NO.', 'STAFF ASSIGNED/OFFICE', 'LOCATION', 'MODEL', 'PROCESSOR', 'RAM INSTALLED', 'WINDOWS (OS)', 'OFFICE SUITE', 'SERIAL NO', 'ASSET TAG', 'YEAR OF ACQUISITION', 'LIFESPAN', 'STATUS', 'ASSET CONDITION', 'COMMENT/ISSUE'],
+        ['1', '4TH FLOOR - ICT SWITCH ROOM', '4TH FLOOR - ICT SWITCH ROOM', 'ThinkCentre M70q', 'Intel Core i5', '16 GB', 'Windows 11 Pro', 'Microsoft 365', 'PF4A1234', 'IT-0001', '2023', '5 years', 'Available', 'Good', ''],
+        ['2', 'CALL CENTRE', 'CALL CENTRE', 'ProBook 450 G8', 'Intel Core i7', '16 GB', 'Windows 10 Pro', 'Microsoft Office 2021', '5CD2127T22', 'IT-0002', '2021', '4 years', 'Checked Out', 'Fair', 'Battery needs replacement']
     ];
-    exportToCSVRows(rows, 'SnipeIT_Clean_Assets');
+    exportToCSVRows(rows, 'GLPI_Computers');
 };
 
 function parseCSV(text) {
@@ -205,63 +222,7 @@ function parseCSV(text) {
 }
 
 function normalizeImportHeader(header) {
-    const key = String(header || '').trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-    const aliases = {
-        id: 'external_id',
-        asset_id: 'external_id',
-        assetname: 'name',
-        asset_name: 'name',
-        assettag: 'otherserial',
-        asset_tag: 'otherserial',
-        tag: 'otherserial',
-        model: 'model',
-        model_no: 'model_no',
-        modelno: 'model_no',
-        model_number: 'model_no',
-        category: 'category',
-        purchased: 'purchase_date',
-        purchased_at: 'purchase_date',
-        checkedout: 'checked_out',
-        checked_out: 'checked_out',
-        checkout: 'checked_out',
-        checkout_date: 'checkout_date',
-        checked_out_date: 'checkout_date',
-        created_at: 'created_at',
-        updated_at: 'updated_at',
-        updatedat: 'updated_at',
-        default_location: 'default_location',
-        defaultlocation: 'default_location',
-        url: 'url',
-        asset_type: 'itemtype',
-        assettype: 'itemtype',
-        item_type: 'itemtype',
-        glpi_type: 'itemtype',
-        staff_assignedoffice: 'assigned_to',
-        staff_assigned_office: 'assigned_to',
-        staffassignedoffice: 'assigned_to',
-        assigned_office: 'assigned_to',
-        assigned_to: 'assigned_to',
-        location: 'locations_id',
-        serial_no: 'serial',
-        serialno: 'serial',
-        serial_number: 'serial',
-        year_of_acquisition: 'acquisition_year',
-        yearofacquisition: 'acquisition_year',
-        acquisition_year: 'acquisition_year',
-        inventory: 'otherserial',
-        inventory_number: 'otherserial',
-        asset_tag: 'otherserial',
-        location_id: 'locations_id',
-        purchase_value: 'value',
-        purchasevalue: 'value',
-        warranty_months: 'warranty',
-        low_stock: 'threshold',
-        lowstock: 'threshold',
-        related_item: 'related_asset',
-        comments: 'comment',
-        notes: 'comment'
-    };
-    return aliases[key] || key;
+    return window.GLPIImportFormat.normalizeImportHeader(header);
 }
 
 
@@ -501,7 +462,7 @@ function renderImportUserMappings() {
                 <td><strong>${escapeHtml(mapping.label)}</strong></td>
                 <td><span class="mapping-status ${statusClass}">${escapeHtml(statusLabel)}</span></td>
                 <td>
-                    <select class="form-control import-user-select" onchange="setImportUserMapping(${index}, this.value)">
+                    <select class="form-control import-user-select" data-searchable onchange="setImportUserMapping(${index}, this.value)">
                         <option value=""${selected === null ? ' selected' : ''} disabled>Select a GLPI user</option>
                         <option value="-1"${Number(selected) === -1 ? ' selected' : ''}>Treat as office / shared location</option>
                         <option value="0"${Number(selected) === 0 && selected !== null ? ' selected' : ''}>Leave unassigned</option>
@@ -742,7 +703,13 @@ function normalizeImportRows(headers, rows) {
                 name: String(row.name || assetTag || serial || model || `Imported Asset ${index + 1}`).trim(),
                 assigned_to: assignedTo,
                 locations_id: location,
+                status: window.GLPIImportFormat.normalizeImportedStatus(row.status),
                 itemtype: resolveImportItemType({ ...row, itemtype: row.itemtype || defaultType }),
+                asset_category: window.GLPIImportFormat.isUpsImportRow(row)
+                    ? 'UPS'
+                    : (window.GLPIImportFormat.isKeyboardImportRow(row)
+                        ? 'Keyboard'
+                        : (window.GLPIImportFormat.isLaptopImportRow({ ...row, itemtype: row.itemtype || defaultType }) ? 'Laptop' : String(row.category || ''))),
                 purchase_date: row.purchase_date || (/^\d{4}$/.test(acquisitionYear) ? `${acquisitionYear}-01-01` : ''),
                 acquisition_year: acquisitionYear
             };
@@ -752,9 +719,11 @@ function normalizeImportRows(headers, rows) {
 
 // Cache for resolving location names to IDs
 const locationCache = {};
+let locationPermissionDenied = false;
 
 async function resolveLocationId(locationName) {
     if (!locationName || isPositiveInteger(locationName)) return locationName;
+    if (locationPermissionDenied) return null;
     const key = String(locationName).toLowerCase().trim();
     if (locationCache[key]) return locationCache[key];
     try {
@@ -771,7 +740,12 @@ async function resolveLocationId(locationName) {
             return id;
         }
     } catch (e) {
-        console.error('Failed to resolve location:', locationName, e);
+        if ([401, 403, 429].includes(Number(e.status))) {
+            locationPermissionDenied = true;
+            console.warn('GLPI denied location lookup; remaining location names will be kept as imported text.');
+        } else {
+            console.error('Failed to resolve location:', locationName, e);
+        }
     }
     return null;
 }
@@ -783,7 +757,6 @@ function validateImportRows(rows) {
         if (!String(row.name || '').trim()) errors.push(`Row ${rowNumber}: name is required`);
         if (!resolveImportItemType(row)) errors.push(`Row ${rowNumber}: unsupported itemtype "${row.itemtype || ''}"`);
         // Location names are allowed - backend will resolve them to IDs
-        if (row.status && importStatusValue(row.status) === null) errors.push(`Row ${rowNumber}: status must be a number or a known status such as New, Used, Available, Checked Out, Retired, Broken`);
         if (row.value && Number.isNaN(Number(row.value))) errors.push(`Row ${rowNumber}: value must be numeric`);
     });
     return errors;
@@ -891,8 +864,11 @@ function renderImportResults(results) {
 function resolveImportItemType(row) {
     const raw = String(row.itemtype || row.asset_type || row.assetType || '').trim();
     const fallback = document.getElementById('importDefaultType')?.value || 'Computer';
+    if (window.GLPIImportFormat.isUpsImportRow(row)) return 'Peripheral';
     const value = raw || fallback;
     const normalized = value.toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+    if (normalized === 'ups') return 'Peripheral';
 
     const aliases = {
         accesspoint: 'NetworkEquipment',
@@ -912,6 +888,8 @@ function resolveImportItemType(row) {
         printer: 'Printer',
         photocopier: 'Printer',
         scanner: 'Peripheral',
+        keyboard: 'Peripheral',
+        keyboards: 'Peripheral',
         peripheral: 'Peripheral',
         projector: 'Peripheral',
         ups: 'Peripheral',
@@ -941,7 +919,7 @@ async function buildImportPayload(data) {
     };
     setPayloadIfPresent(payload, 'serial', data.serial);
     setPayloadIfPresent(payload, 'otherserial', data.otherserial);
-    setPayloadIfPresent(payload, 'comment', data.comment || importCommentFromRow(data));
+    setPayloadIfPresent(payload, 'comment', importCommentFromRow(data));
 
     // Resolve the location name from the KUCCPS/Snipe-IT template to a GLPI location ID.
     const locationValue = data.locations_id || data.location || '';
@@ -956,9 +934,6 @@ async function buildImportPayload(data) {
     if (isPositiveInteger(data.entities_id)) payload.entities_id = Number(data.entities_id);
     if (Number(data.import_user_id) > 0) payload.users_id = Number(data.import_user_id);
 
-    const stateId = importStatusValue(data.status);
-    if (stateId !== null) payload.states_id = stateId;
-
     const typeField = importTypeField(apiType);
     if (typeField && isPositiveInteger(data.type)) payload[typeField] = Number(data.type);
     return payload;
@@ -966,18 +941,20 @@ async function buildImportPayload(data) {
 
 function importCommentFromRow(data) {
     const lines = [];
-    if (data.external_id) lines.push(`Imported ID: ${data.external_id}`);
+    if (data.asset_category || data.category) lines.push(`Asset Category: ${data.asset_category || data.category}`);
+    if (data.external_id) lines.push(`No.: ${data.external_id}`);
     if (data.assigned_to) lines.push(`Staff Assigned/Office: ${data.assigned_to}`);
-    if (data.itemtype) lines.push(`Asset Type: ${data.itemtype}`);
     if (data.model) lines.push(`Model: ${data.model}`);
-    if (data.model_no) lines.push(`Model No.: ${data.model_no}`);
-    if (data.category) lines.push(`Category: ${data.category}`);
+    if (data.processor) lines.push(`Processor: ${data.processor}`);
+    if (data.ram_installed) lines.push(`RAM Installed: ${data.ram_installed}`);
+    if (data.operating_system) lines.push(`Windows (OS): ${data.operating_system}`);
+    if (data.office_suite) lines.push(`Office Suite: ${data.office_suite}`);
     if (data.locations_id || data.location) lines.push(`Location: ${data.locations_id || data.location}`);
     if (data.acquisition_year) lines.push(`Year of Acquisition: ${data.acquisition_year}`);
-    if (data.default_location) lines.push(`Default Location: ${data.default_location}`);
-    if (data.checked_out) lines.push(`Checked Out: ${data.checked_out}`);
-    if (data.checkout_date) lines.push(`Checkout Date: ${data.checkout_date}`);
-    if (data.url) lines.push(`URL: ${data.url}`);
+    if (data.lifespan) lines.push(`Lifespan: ${data.lifespan}`);
+    if (data.status) lines.push(`Imported Status: ${data.status}`);
+    if (data.asset_condition) lines.push(`Asset Condition: ${data.asset_condition}`);
+    if (data.comment) lines.push(`Comment/Issue: ${data.comment}`);
     return lines.join('\n');
 }
 
@@ -987,34 +964,7 @@ function setPayloadIfPresent(payload, key, value) {
 }
 
 function importStatusValue(value) {
-    if (value == null || value === '') return null;
-    if (isPositiveInteger(value) || String(value) === '0') return Number(value);
-    const map = {
-        new: 0,
-        available: 0,
-        ready: 0,
-        stock: 0,
-        used: 1,
-        use: 1,
-        inuse: 1,
-        active: 1,
-        deployed: 1,
-        assigned: 1,
-        checkedout: 1,
-        old: 2,
-        retired: 2,
-        archived: 2,
-        activeinuse: 1,
-        activeuse: 1,
-        inservice: 1,
-        operational: 1,
-        broken: 3,
-        damaged: 3,
-        lost: 3,
-        disposed: 3
-    };
-    const normalized = String(value).trim().toLowerCase().replace(/[\s_-]+/g, '');
-    return Object.prototype.hasOwnProperty.call(map, normalized) ? map[normalized] : null;
+    return window.GLPIImportFormat.importStatusValue(value);
 }
 
 function importTypeField(apiType) {

@@ -67,9 +67,12 @@ window.exportReport = function() {
 function showCreateModal(assetType) {
     state.editAssetId = null;
     state.editAssetType = assetType;
+    const pcidGroup = document.getElementById('assetPCIDGroup');
+    if (pcidGroup) pcidGroup.style.display = ['Computer', 'Printer'].includes(assetType) ? '' : 'none';
     document.getElementById('createModalTitle').textContent = `Add New ${getAssetTypeLabel(assetType)}`;
     document.getElementById('createAssetForm').reset();
     fillFinancialForm({});
+    fillPCIDForm();
     fillStockForm({});
     showModal('createModal');
 }

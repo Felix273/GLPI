@@ -24,8 +24,12 @@
 
 ## Files changed
 
-- `index.html`
-- `assets/css/style.css`
-- `assets/js/app.js`
+- `templates/index.php`
+- `assets/css/core/base.css`
+- `assets/css/core/theme.css`
+- `assets/css/features/operations.css`
+- `main.js`
+- `assets/js/core/*.js`
+- `assets/js/features/*.js`
 
-The GLPI API client and PHP backend were not changed.
+The GLPI API client and PHP backend remained the integration layer, while the UI was modularized around the current asset dashboard structure.

@@ -9,6 +9,28 @@
 define('RATE_LIMIT_DIR', sys_get_temp_dir() . '/glpi-ratelimit');
 const RATE_LIMIT_MAX = 100;
 const RATE_LIMIT_WINDOW = 60;
+const GLPI_CONFIG_UPDATE_RIGHT = 2;
+
+function sessionHasAdministrativeProfile(mixed $value): bool
+{
+    if (!is_array($value)) {
+        return false;
+    }
+
+    foreach ($value as $key => $item) {
+        if (strtolower((string)$key) === 'config' && is_numeric($item)) {
+            if (((int)$item & GLPI_CONFIG_UPDATE_RIGHT) !== 0) {
+                return true;
+            }
+        }
+
+        if (is_array($item) && sessionHasAdministrativeProfile($item)) {
+            return true;
+        }
+    }
+
+    return false;
+}
 
 /**
  * Simple file-based rate limiter per client key (typically IP:endpoint).
@@ -31,6 +53,18 @@ function rateLimit(string $key, int $max = RATE_LIMIT_MAX, int $window = RATE_LI
     file_put_contents($file, json_encode($data));
 
     return $data['count'] <= $max;
+}
+
+function configuredRateLimit(string $key): bool
+{
+    $configuredMax = filter_var(getenv('RATE_LIMIT_MAX'), FILTER_VALIDATE_INT);
+    $configuredWindow = filter_var(getenv('RATE_LIMIT_WINDOW'), FILTER_VALIDATE_INT);
+
+    return rateLimit(
+        $key,
+        $configuredMax !== false && $configuredMax > 0 ? $configuredMax : RATE_LIMIT_MAX,
+        $configuredWindow !== false && $configuredWindow > 0 ? $configuredWindow : RATE_LIMIT_WINDOW
+    );
 }
 
 /**
@@ -173,9 +207,11 @@ function defaultSidebarItems(): array
         ['type' => 'link', 'view' => 'reports', 'label' => 'Reports', 'icon' => 'fas fa-chart-column', 'visible' => true],
         ['type' => 'link', 'view' => 'alerts', 'label' => 'Alerts', 'icon' => 'fas fa-bell', 'visible' => true],
         ['type' => 'group', 'title' => 'Computing', 'visible' => true, 'items' => [
-            ['type' => 'link', 'view' => 'computers', 'label' => 'Computers', 'icon' => 'fas fa-desktop', 'visible' => true],
+            ['type' => 'link', 'view' => 'computers', 'label' => 'CPU', 'icon' => 'fas fa-desktop', 'visible' => true],
+            ['type' => 'link', 'view' => 'laptops', 'label' => 'Laptops', 'icon' => 'fas fa-laptop', 'visible' => true],
             ['type' => 'link', 'view' => 'monitors', 'label' => 'Monitors', 'icon' => 'fas fa-desktop', 'visible' => true],
             ['type' => 'link', 'view' => 'peripherals', 'label' => 'Peripherals', 'icon' => 'fas fa-keyboard', 'visible' => true],
+            ['type' => 'link', 'view' => 'ups', 'label' => 'UPS', 'icon' => 'fas fa-car-battery', 'visible' => true],
             ['type' => 'link', 'view' => 'phones', 'label' => 'Phones', 'icon' => 'fas fa-phone', 'visible' => true],
         ]],
         ['type' => 'group', 'title' => 'Office', 'visible' => true, 'items' => [
@@ -190,7 +226,7 @@ function defaultSidebarItems(): array
         ]],
         ['type' => 'group', 'title' => 'Software & Licenses', 'visible' => true, 'items' => [
             ['type' => 'link', 'view' => 'software', 'label' => 'Software', 'icon' => 'fas fa-code', 'visible' => true],
-            ['type' => 'link', 'view' => 'licenses', 'label' => 'Licenses', 'icon' => 'fas fa-id-card', 'visible' => true],
+            ['type' => 'link', 'view' => 'licenses', 'label' => 'SLA & Licenses', 'icon' => 'fas fa-file-contract', 'visible' => true],
             ['type' => 'link', 'view' => 'certificates', 'label' => 'Certificates', 'icon' => 'fas fa-certificate', 'visible' => true],
         ]],
         ['type' => 'group', 'title' => 'Management', 'visible' => true, 'items' => [

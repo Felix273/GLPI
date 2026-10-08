@@ -1313,6 +1313,68 @@ HTML;
      **/
     public static function getMenuInfos()
     {
+        $menu = self::getRawMenuInfos();
+
+        // Filter menu item types based on admin configuration.
+        // The `menu_item_types` config option lets administrators control
+        // which item types appear in the sidebar menu.
+        /** @var array $CFG_GLPI */
+        global $CFG_GLPI;
+        if (isset($CFG_GLPI['menu_item_types']) && is_array($CFG_GLPI['menu_item_types'])) {
+            $allowed_types = array_flip($CFG_GLPI['menu_item_types']);
+            foreach ($menu as $category => $data) {
+                if (!isset($data['types']) || !is_array($data['types'])) {
+                    continue;
+                }
+                $menu[$category]['types'] = array_values(array_filter(
+                    $data['types'],
+                    fn($type) => isset($allowed_types[$type])
+                ));
+            }
+        }
+
+        return $menu;
+    }
+
+    /**
+     * Get the list of itemtypes that can be displayed in the sidebar menu,
+     * organized by their menu category. Used to populate the settings form.
+     *
+     * @since 10.0.0
+     *
+     * @return array Array of [itemtype => label] pairs
+     */
+    public static function getMenuItemTypesForDropdown()
+    {
+        $categories = self::getRawMenuInfos();
+        $result = [];
+        foreach ($categories as $category => $data) {
+            if (!isset($data['types']) || !is_array($data['types'])) {
+                continue;
+            }
+            foreach ($data['types'] as $itemtype) {
+                if (!class_exists($itemtype)) {
+                    continue;
+                }
+                if (!method_exists($itemtype, 'getTypeName')) {
+                    continue;
+                }
+                $label = $itemtype::getTypeName(1);
+                $result[$itemtype] = $label;
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * Get the raw (unfiltered) menu definitions.
+     *
+     * @since 10.0.0
+     *
+     * @return array
+     */
+    public static function getRawMenuInfos()
+    {
         /** @var array $CFG_GLPI */
         global $CFG_GLPI;
 

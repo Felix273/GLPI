@@ -1,0 +1,10 @@
+{
+    "name": "glpi/asset-dashboard",
+    "description": "GLPI Asset Dashboard backend tests",
+    "require-dev": {
+        "phpunit/phpunit": "^10.0"
+    },
+    "autoload": {
+        "files": ["lib/functions.php"]
+    }
+}
