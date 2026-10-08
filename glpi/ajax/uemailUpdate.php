@@ -122,7 +122,7 @@ if (
     ) {
         $email_string =  $default_email[$user_index];
         // Clean alternative email
-        echo "<input type='hidden' size='25' name='" . $_POST['field'] . "[alternative_email][]'
+        echo "<input type='hidden' size='25' name='" . htmlspecialchars($_POST['field'], ENT_QUOTES | ENT_HTML5, 'UTF-8') . "[alternative_email][]'
              value=''>";
     } elseif (count($emails) > 1) {
         // Several emails: select in the list

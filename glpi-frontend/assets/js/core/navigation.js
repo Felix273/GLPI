@@ -9,6 +9,7 @@ function showViewError(view, message) {
     softwareMatrix: "softwareMatrixView",
     users: "usersView",
     settings: "settingsView",
+    licenses: "licensesView",
   }[view];
   if (!viewId) return;
   const viewElement = document.getElementById(viewId);
@@ -33,15 +34,16 @@ async function navigateTo(view) {
     .forEach((v) => v.classList.remove("active"));
 
   const views = {
-    dashboard: "dashboardView",
-    reports: "reportsView",
-    alerts: "alertsView",
-    import: "importView",
-    inventoryHealth: "inventoryHealthView",
-    softwareMatrix: "softwareMatrixView",
-    users: "usersView",
-    settings: "settingsView",
-  };
+     dashboard: "dashboardView",
+     reports: "reportsView",
+     alerts: "alertsView",
+     import: "importView",
+     inventoryHealth: "inventoryHealthView",
+     softwareMatrix: "softwareMatrixView",
+     users: "usersView",
+     settings: "settingsView",
+     licenses: "licensesView",
+   };
   if (views[view]) {
     state.currentAssetType = null;
     const viewElement = document.getElementById(views[view]);
@@ -61,6 +63,7 @@ async function navigateTo(view) {
       else if (view === "softwareMatrix") await loadSoftwareMatrix();
       else if (view === "users") await loadUsers();
       else if (view === "settings") await loadSettingsPage();
+      else if (view === "licenses") await loadSlaLicences();
 
       if (view === "inventoryHealth" || view === "softwareMatrix") {
         state.refreshIntervalId = setInterval(
@@ -100,6 +103,7 @@ function updatePageContext(view) {
     import: ["Import assets", "Data tools"],
     inventoryHealth: ["Inventory health", "Operations"],
     softwareMatrix: ["Software matrix", "Insights"],
+    licenses: ["SLA & Licenses", "Service agreements and software"],
   };
   const [title, eyebrow] = specialViews[view] || [
     ASSET_TYPES[view]?.label || "Assets",
@@ -210,9 +214,11 @@ const DEFAULT_SIDEBAR_ITEMS = [
   { type: "link", view: "reports", label: "Reports", icon: "fas fa-chart-column", visible: true },
   { type: "link", view: "alerts", label: "Alerts", icon: "fas fa-bell", visible: true },
   { type: "group", title: "Computing", visible: true, items: [
-    { type: "link", view: "computers", label: "Computers", icon: "fas fa-desktop", visible: true },
+    { type: "link", view: "computers", label: "CPU", icon: "fas fa-desktop", visible: true },
+    { type: "link", view: "laptops", label: "Laptops", icon: "fas fa-laptop", visible: true },
     { type: "link", view: "monitors", label: "Monitors", icon: "fas fa-desktop", visible: true },
     { type: "link", view: "peripherals", label: "Peripherals", icon: "fas fa-keyboard", visible: true },
+    { type: "link", view: "ups", label: "UPS", icon: "fas fa-car-battery", visible: true },
     { type: "link", view: "phones", label: "Phones", icon: "fas fa-phone", visible: true },
   ]},
   { type: "group", title: "Office", visible: true, items: [
@@ -227,7 +233,7 @@ const DEFAULT_SIDEBAR_ITEMS = [
   ]},
   { type: "group", title: "Software & Licenses", visible: true, items: [
     { type: "link", view: "software", label: "Software", icon: "fas fa-code", visible: true },
-    { type: "link", view: "licenses", label: "Licenses", icon: "fas fa-id-card", visible: true },
+    { type: "link", view: "licenses", label: "SLA & Licenses", icon: "fas fa-file-contract", visible: true },
     { type: "link", view: "certificates", label: "Certificates", icon: "fas fa-certificate", visible: true },
   ]},
   { type: "group", title: "Management", visible: true, items: [
@@ -256,6 +262,7 @@ function renderSidebar(config) {
   const items = Array.isArray(config?.items) && config.items.length
     ? config.items
     : DEFAULT_SIDEBAR_ITEMS;
+  normalizeSlaLicenceNavigationLabel(items);
 
   let html = "";
 
@@ -449,7 +456,38 @@ function getSidebarConfig(settings) {
   let items = Array.isArray(sidebar.items) && sidebar.items.length
     ? sidebar.items
     : JSON.parse(JSON.stringify(DEFAULT_SIDEBAR_ITEMS));
+  normalizeSlaLicenceNavigationLabel(items);
   return { showGroupTitles: sidebar.showGroupTitles !== false, items };
+}
+
+function normalizeSlaLicenceNavigationLabel(items) {
+  for (const item of items || []) {
+    if (item?.type === "link" && item.view === "computers") {
+      item.label = "CPU";
+    }
+    if (
+      item?.type === "group" &&
+      item.title === "Computing" &&
+      Array.isArray(item.items)
+    ) {
+      const defaults = [
+        { view: "laptops", label: "Laptops", icon: "fas fa-laptop" },
+        { view: "ups", label: "UPS", icon: "fas fa-car-battery" },
+      ];
+      defaults.forEach(link => {
+        if (!item.items.some(child => child?.type === "link" && child.view === link.view)) {
+          item.items.push({ type: "link", ...link, visible: true });
+        }
+      });
+    }
+    if (item?.type === "link" && item.view === "licenses") {
+      item.label = "SLA & Licenses";
+    }
+    if (item?.type === "group" && Array.isArray(item.items)) {
+      normalizeSlaLicenceNavigationLabel(item.items);
+    }
+  }
+  return items;
 }
 
 function populateSidebarSettings(settings) {
@@ -488,7 +526,7 @@ function renderSidebarGroupRow(group, index, showGroupTitles) {
       <label class="sidebar-editor-checkbox">
         <input type="checkbox" ${visible ? "checked" : ""} onchange="toggleSidebarGroup(${index}, this.checked)">
       </label>
-      <span class="sidebar-editor-icon">${title}</span>
+      <span class="sidebar-editor-icon"><i class="fas fa-folder-open" aria-hidden="true"></i></span>
       <span class="sidebar-editor-label">${title}</span>
       <span class="sidebar-editor-meta">${visibleCount}/${total} visible</span>
       <button class="btn-icon btn-sm btn-sidebar-toggle" onclick="toggleSidebarGroupItems(${index})" title="Expand or collapse"><i class="fas fa-chevron-down"></i></button>
@@ -770,8 +808,61 @@ function settingsDisplayDate(value) {
   return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString();
 }
 
+function getSettingsLogAction(entry) {
+  const action = entry.linked_action ?? entry.action;
+  if (typeof action === "string" && action.trim() && !Number.isFinite(Number(action))) return action;
+
+  const actionLabels = {
+    0: "Log message",
+    1: "Component added",
+    2: "Component changed",
+    3: "Component deleted",
+    4: "Software installed",
+    5: "Software uninstalled",
+    6: "Item disconnected",
+    7: "Item connected",
+    8: "Component locked",
+    9: "Component unlocked",
+    12: "Log message",
+    13: "Item deleted",
+    14: "Item restored",
+    15: "Item linked",
+    16: "Item unlinked",
+    17: "Sub-item added",
+    18: "Sub-item updated",
+    19: "Sub-item deleted",
+    20: "Item added",
+    21: "Item link updated",
+    22: "Item link locked",
+    23: "Sub-item locked",
+    24: "Item link unlocked",
+    25: "Sub-item unlocked",
+    26: "Item locked",
+    27: "Item unlocked",
+  };
+  return actionLabels[Number(action)] || (action ? `Action ${action}` : "Updated");
+}
+
+function getSettingsLogDetails(entry) {
+  if (entry.change || entry.message) return entry.change || entry.message;
+  const oldValue = entry.old_value == null ? "" : String(entry.old_value);
+  const newValue = entry.new_value == null ? "" : String(entry.new_value);
+  if (oldValue && newValue) return `${oldValue} -> ${newValue}`;
+  return newValue || oldValue || "-";
+}
+
 function getSettingsLogText(entry) {
-  return [entry.date, entry.user_name, entry.user, entry.itemtype, entry.itemtype_name, entry.linked_action, entry.change].filter(Boolean).join(" ").toLowerCase();
+  return [
+    entry.date,
+    entry.date_mod,
+    entry.user_name,
+    entry.user,
+    entry.itemtype,
+    entry.itemtype_name,
+    entry.items_id,
+    getSettingsLogAction(entry),
+    getSettingsLogDetails(entry),
+  ].filter(Boolean).join(" ").toLowerCase();
 }
 
 async function loadSettingsLogs(force = false) {
@@ -783,8 +874,8 @@ async function loadSettingsLogs(force = false) {
   body.innerHTML = '<tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr>';
   try {
     const limit = Number(document.getElementById("settingsLogLimit")?.value || 25);
-    const result = await glpi.getItems("Log", { range: `0-${limit - 1}`, sort: "date", order: "DESC" });
-    settingsLogs = Array.isArray(result) ? result : [];
+    const result = await glpi.getItems("Log", { range: `0-${limit - 1}`, sort: "date_mod", order: "DESC" });
+    settingsLogs = Array.isArray(result) ? result.filter(entry => entry && typeof entry === "object") : [];
     filterSettingsLogs();
     setSettingsInlineStatus("settingsLogsStatus", `${settingsLogs.length} log entr${settingsLogs.length === 1 ? "y" : "ies"} loaded`, "success");
   } catch (error) {
@@ -800,7 +891,12 @@ function filterSettingsLogs() {
   if (!body) return;
   const term = String(document.getElementById("settingsLogSearch")?.value || "").trim().toLowerCase();
   const rows = settingsLogs.filter(entry => !term || getSettingsLogText(entry).includes(term));
-  body.innerHTML = rows.length ? rows.map(entry => `<tr><td data-label="Date">${escapeHtml(settingsDisplayDate(entry.date || entry.date_mod))}</td><td data-label="User">${escapeHtml(entry.user_name || entry.user || "System")}</td><td data-label="Action"><span class="status-badge neutral">${escapeHtml(entry.linked_action || entry.action || "Updated")}</span></td><td data-label="Item">${escapeHtml(entry.itemtype_name || entry.itemtype || "-")}</td><td data-label="Details">${escapeHtml(entry.change || entry.message || "-")}</td></tr>`).join("") : '<tr><td colspan="5"><div class="empty-state compact"><i class="fas fa-filter-circle-xmark"></i><p>No matching log entries.</p></div></td></tr>';
+  const emptyMessage = settingsLogs.length ? "No matching log entries." : "No log entries recorded.";
+  body.innerHTML = rows.length ? rows.map(entry => {
+    const item = entry.itemtype_name || entry.itemtype || "-";
+    const itemId = entry.items_id ? ` #${entry.items_id}` : "";
+    return `<tr><td data-label="Date">${escapeHtml(settingsDisplayDate(entry.date || entry.date_mod))}</td><td data-label="User">${escapeHtml(entry.user_name || entry.user || "System")}</td><td data-label="Action"><span class="status-badge neutral">${escapeHtml(getSettingsLogAction(entry))}</span></td><td data-label="Item">${escapeHtml(`${item}${itemId}`)}</td><td data-label="Details">${escapeHtml(getSettingsLogDetails(entry))}</td></tr>`;
+  }).join("") : `<tr><td colspan="5"><div class="empty-state compact"><i class="fas fa-filter-circle-xmark"></i><p>${emptyMessage}</p></div></td></tr>`;
 }
 window.filterSettingsLogs = filterSettingsLogs;
 

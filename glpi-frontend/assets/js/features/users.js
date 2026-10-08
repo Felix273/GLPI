@@ -126,6 +126,12 @@ async function loadUsers() {
 
         renderUsersTable();
         renderUnlinkedAssociations();
+
+        const inactiveUsers = state.users.filter(user => String(user.is_active ?? user.active ?? '1') === '0');
+        if (inactiveUsers.length) {
+            addAlert('Inactive users detected', `${inactiveUsers.length} user(s) are disabled in GLPI`, 'info', 'users-inactive');
+        }
+        updateNotificationBadge();
     } catch (error) {
         tbody.innerHTML = `
             <tr>

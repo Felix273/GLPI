@@ -79,7 +79,7 @@ async function loadReports() {
         renderReportTable();
     } catch (error) {
         console.error('Unable to load reports:', error);
-        table.innerHTML = `<tr><td colspan="10"><div class="empty-state"><i class="fas fa-triangle-exclamation"></i><h3>Report unavailable</h3><p>${escapeHtml(getFriendlyErrorMessage(error))}</p></div></td></tr>`;
+        table.innerHTML = `<tr><td colspan="10"><div class="empty-state"><i class="fas fa-triangle-exclamation"></i><h3>Report unavailable</h3><p>${escapeHtml(formatApiError(error))}</p><button class="btn-secondary" onclick="loadReports()">Retry</button></div></td></tr>`;
         showToast('Unable to load report data', 'error');
     }
 }

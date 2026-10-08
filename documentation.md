@@ -87,17 +87,18 @@ The implementation was committed and pushed to GitHub on branch `develop`. The d
 ```text
 GLPI/
 ├── compose.yml
-├── compose.glpi.yml
 ├── .env.example
+├── .env.glpi              # ignored local GLPI database settings
+├── .env.settings          # ignored local frontend settings
 ├── verify-project.sh
 ├── glpi-frontend/
 │   ├── Dockerfile
 │   ├── server.php
+│   ├── main.js
 │   ├── assets/
 │   │   ├── css/
 │   │   │   ├── core/
-│   │   │   ├── features/
-│   │   │   └── style.css
+│   │   │   └── features/
 │   │   └── js/
 │   │       ├── api.js
 │   │       ├── core/
@@ -107,10 +108,17 @@ GLPI/
 │   │   ├── partials/
 │   │   ├── views/
 │   │   └── modals/
+│   ├── tests/
+│   │   ├── e2e/
+│   │   └── *.test.js
 │   └── data/
 │       ├── branding/
 │       ├── documents/
 │       └── metadata/
+├── scripts/
+├── secrets/
+├── Caddyfile
+├── prometheus.yml
 └── project documentation files
 ```
 
@@ -126,7 +134,7 @@ Runtime JSON, local settings, backups, checkpoints, database dumps and environme
 
 ### Phase 2 - JavaScript modularization
 
-The original `app.js` was split into:
+The original monolithic frontend entry was split into the current modular layout, driven by `main.js` and the active modules under `assets/js/`:
 
 - `core/application.js`
 - `core/dom.js`
@@ -134,18 +142,20 @@ The original `app.js` was split into:
 - `core/navigation.js`
 - `features/assets.js`
 - `features/charts.js`
+- `features/dashboard-customization.js`
 - `features/import.js`
 - `features/inventory.js`
 - `features/notifications.js`
 - `features/operations.js`
 - `features/reports.js`
+- `features/sla-licences.js`
 - `features/users.js`
 
 Duplicate function declarations were removed and authoritative enhanced implementations were retained.
 
 ### Phase 3 - CSS modularization
 
-The monolithic stylesheet was split into:
+The monolithic stylesheet was split into the active modules below:
 
 - `core/base.css`
 - `core/theme.css`
@@ -155,7 +165,7 @@ The monolithic stylesheet was split into:
 - `features/settings.css`
 - `features/import.css`
 
-`assets/css/style.css` remains as a compatibility entry that imports the active modules for stale browser tabs.
+The static frontend is served through the PHP app; no legacy monolithic stylesheet or `style.css` entry is required for the current build.
 
 ### Phase 4 - HTML/PHP template composition
 
@@ -208,6 +218,7 @@ Internal files now return HTTP 404, including:
 - Docker Engine and Docker Compose plugin
 - A modern browser
 - Optional for local validation: PHP CLI, Node.js and Chromium/Google Chrome
+- Local deployment prerequisites: `.env.glpi`, `.env.settings`, the external Docker network `glpi-network`, and the external data volume configured in `compose.yml`
 
 ### Clone and checkout
 

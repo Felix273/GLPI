@@ -62,12 +62,13 @@ curl -fsS http://127.0.0.1:8091/backend/health
 ## Validation performed
 
 - PHP syntax validation for `server.php`.
-- JavaScript syntax validation for `api.js` and `app.js`.
+- JavaScript syntax validation for `main.js` and all modules under `assets/js/`.
 - HTML parsing and duplicate-ID checks.
 - Static server and health-endpoint checks.
 - Dashboard KPI/activity smoke test with representative GLPI responses.
 - Asset table/filter/warranty smoke test.
 - Assignment and maintenance persistence smoke test.
+- Optional authenticated browser E2E covering login, asset loading, metadata, document upload/delete, and logout.
 - Compose YAML structure validation.
 
 Docker image startup could not be executed in the packaging environment because Docker is not installed there. The Compose files were parsed and validated as YAML, and the services retain the existing image, external volume, socket mount, and network configuration.

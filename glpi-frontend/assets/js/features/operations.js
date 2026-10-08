@@ -6,6 +6,13 @@
 const OPERATIONAL_ASSET_APIS = new Set(['Computer', 'Monitor', 'Peripheral', 'Phone', 'Printer', 'NetworkEquipment', 'Rack']);
 const ENHANCED_DOCUMENT_LIMIT_BYTES = 5 * 1024 * 1024;
 const SESSION_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+const DASHBOARD_LAYOUT_KEY = 'glpi_dashboard_layout';
+const DEFAULT_DASHBOARD_WIDGETS = ['asset-stats', 'charts', 'software', 'quick-actions', 'recent-activity', 'warranty-watch', 'team-notes'];
+const DEFAULT_HIDDEN_DASHBOARD_WIDGETS = ['warranty-watch', 'team-notes'];
+const CUSTOM_DASHBOARD_WIDGETS_KEY = 'glpi_custom_dashboard_widgets';
+const DASHBOARD_WIDGET_CONFIG_KEY = 'glpi_dashboard_widget_config';
+const CUSTOM_WIDGET_TYPES = ['kpi', 'pie', 'doughnut', 'bar', 'table', 'list', 'notes', 'warranty'];
+const dashboardCustomization = window.dashboardCustomization || {};
 let sessionIdleTimer = null;
 let sessionExpiryHandled = false;
 
@@ -30,10 +37,277 @@ Object.assign(state, {
 window.addEventListener('glpi:session-expired', () => expireFrontendSession('Your GLPI session expired. Sign in again to continue.'));
 
 document.addEventListener('DOMContentLoaded', () => {
+    setupDashboardCustomization();
     setupEnhancedReliability();
     setupDocumentDropZone();
     setupWarrantyCalculator();
 });
+
+function getDashboardLayout() {
+    const customWidgets = getCustomDashboardWidgets();
+    const widgetIds = [...DEFAULT_DASHBOARD_WIDGETS, ...customWidgets.map(widget => widget.id)];
+    try {
+        const saved = JSON.parse(localStorage.getItem(DASHBOARD_LAYOUT_KEY) || '{}');
+        const layout = window.normalizeDashboardLayout
+            ? window.normalizeDashboardLayout(saved, widgetIds, DEFAULT_HIDDEN_DASHBOARD_WIDGETS)
+            : { order: [...widgetIds], hidden: [...DEFAULT_HIDDEN_DASHBOARD_WIDGETS] };
+        return layout;
+    } catch (error) {
+        return { order: [...DEFAULT_DASHBOARD_WIDGETS], hidden: [...DEFAULT_HIDDEN_DASHBOARD_WIDGETS] };
+    }
+}
+
+function getCustomDashboardWidgets() {
+    try {
+        const widgets = JSON.parse(localStorage.getItem(CUSTOM_DASHBOARD_WIDGETS_KEY) || '[]');
+        return Array.isArray(widgets) ? widgets.filter(widget => widget && widget.id && widget.title && CUSTOM_WIDGET_TYPES.includes(widget.type)) : [];
+    } catch (error) {
+        return [];
+    }
+}
+
+function getDashboardWidgetConfig() {
+    try { return JSON.parse(localStorage.getItem(DASHBOARD_WIDGET_CONFIG_KEY) || '{}') || {}; } catch (error) { return {}; }
+}
+
+function saveDashboardWidgetConfig(config) {
+    localStorage.setItem(DASHBOARD_WIDGET_CONFIG_KEY, JSON.stringify(config));
+}
+
+function saveCustomDashboardWidgets(widgets) {
+    localStorage.setItem(CUSTOM_DASHBOARD_WIDGETS_KEY, JSON.stringify(widgets));
+}
+
+function saveDashboardLayout(layout) {
+    const widgetIds = [...DEFAULT_DASHBOARD_WIDGETS, ...getCustomDashboardWidgets().map(widget => widget.id)];
+    const sanitized = window.normalizeDashboardLayout
+        ? window.normalizeDashboardLayout(layout, widgetIds, DEFAULT_HIDDEN_DASHBOARD_WIDGETS)
+        : layout;
+    state.dashboardLayout = sanitized;
+    localStorage.setItem(DASHBOARD_LAYOUT_KEY, JSON.stringify(sanitized));
+}
+
+function setupDashboardCustomization() {
+    const canvas = document.getElementById('dashboardCanvas');
+    if (!canvas) return;
+    const layout = getDashboardLayout();
+    state.dashboardLayout = layout;
+    renderCustomDashboardWidgets();
+    applyDashboardLayout(layout);
+    applyBuiltInDashboardWidgetConfig();
+    const notes = document.getElementById('dashboardNotes');
+    if (notes) {
+        notes.value = localStorage.getItem('glpi_dashboard_notes') || '';
+        notes.addEventListener('input', () => localStorage.setItem('glpi_dashboard_notes', notes.value));
+    }
+    canvas.addEventListener('dragover', event => {
+        if (!state.dashboardEditMode) return;
+        event.preventDefault();
+        const dragged = canvas.querySelector('.dashboard-widget.is-dragging');
+        const target = event.target.closest('.dashboard-widget');
+        if (!dragged || !target || dragged === target) return;
+        const box = target.getBoundingClientRect();
+        canvas.insertBefore(dragged, event.clientY < box.top + box.height / 2 ? target : target.nextSibling);
+    });
+    canvas.addEventListener('dragend', event => {
+        const widget = event.target.closest('.dashboard-widget');
+        if (!widget) return;
+        widget.classList.remove('is-dragging');
+        saveDashboardLayout({ ...getDashboardLayout(), order: [...canvas.querySelectorAll('.dashboard-widget')].map(item => item.dataset.dashboardWidget) });
+    });
+}
+
+function applyBuiltInDashboardWidgetConfig() {
+    const config = getDashboardWidgetConfig();
+    const warranty = config['warranty-watch'];
+    const notes = config['team-notes'];
+    const warrantyWidget = document.querySelector('[data-dashboard-widget="warranty-watch"]');
+    const notesWidget = document.querySelector('[data-dashboard-widget="team-notes"]');
+    if (warrantyWidget && warranty?.title) { warrantyWidget.dataset.widgetLabel = warranty.title; warrantyWidget.querySelector('h2').textContent = warranty.title; }
+    if (notesWidget && notes?.title) { notesWidget.dataset.widgetLabel = notes.title; notesWidget.querySelector('h2').textContent = notes.title; }
+    if (notesWidget?.querySelector('textarea')) notesWidget.querySelector('textarea').placeholder = notes?.placeholder || 'Add a note for your dashboard...';
+}
+
+function applyDashboardLayout(layout) {
+    const canvas = document.getElementById('dashboardCanvas');
+    if (!canvas) return;
+    layout.order.forEach(id => {
+        const widget = canvas.querySelector(`[data-dashboard-widget="${id}"]`);
+        if (widget) canvas.appendChild(widget);
+    });
+    canvas.querySelectorAll('.dashboard-widget').forEach(widget => {
+        const hidden = layout.hidden.includes(widget.dataset.dashboardWidget);
+        widget.hidden = hidden;
+        widget.classList.toggle('is-hidden', hidden);
+        widget.draggable = state.dashboardEditMode && !hidden;
+        widget.classList.toggle('is-editable', state.dashboardEditMode && !hidden);
+        widget.ondragstart = event => { event.dataTransfer.effectAllowed = 'move'; widget.classList.add('is-dragging'); };
+    });
+}
+
+function openCustomWidgetBuilder() {
+    let modal = document.getElementById('customDashboardWidgetModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'customDashboardWidgetModal';
+        modal.className = 'modal';
+        modal.innerHTML = `<div class="modal-content modal-small"><div class="modal-header"><div><span class="eyebrow">Dashboard builder</span><h2>Create widget</h2></div><button class="modal-close" onclick="closeModal('customDashboardWidgetModal')"><i class="fas fa-times"></i></button></div><div class="modal-body"><p class="widget-builder-help">Choose a format, then select the inventory data it should show.</p><div class="form-group"><label for="customWidgetTitle">Widget title</label><input id="customWidgetTitle" type="text" placeholder="e.g. Equipment mix" maxlength="60"></div><div class="form-group"><label for="customWidgetType">Format</label><select id="customWidgetType"><option value="kpi">Metric card</option><option value="pie">Pie chart</option><option value="doughnut">Doughnut chart</option><option value="bar">Bar chart</option><option value="table">Data table</option><option value="list">Ranked list</option><option value="notes">Team notes</option><option value="warranty">Warranty watch</option></select></div><div class="form-group" id="customWidgetSourceGroup"><label for="customWidgetSource">Data source</label><select id="customWidgetSource"><option value="total">Total assets</option><option value="type">Assets by type</option><option value="status">Assets by status</option><option value="software">Top software</option><option value="recent">Recent activity</option><option value="warranty">Warranty status</option></select></div><div class="form-actions"><button type="button" class="btn-secondary" onclick="closeModal('customDashboardWidgetModal')">Cancel</button><button type="button" class="btn-primary" onclick="createCustomDashboardWidget()"><i class="fas fa-plus"></i> Create widget</button></div></div></div>`;
+        document.body.appendChild(modal);
+    }
+    showModal('customDashboardWidgetModal');
+}
+
+function createCustomDashboardWidget() {
+    const title = document.getElementById('customWidgetTitle')?.value.trim();
+    if (!title) return showToast('Enter a widget title', 'error');
+    const type = document.getElementById('customWidgetType').value;
+    const widget = { id: `custom-${Date.now()}`, title, type, source: document.getElementById('customWidgetSource')?.value || type };
+    saveCustomDashboardWidgets([...getCustomDashboardWidgets(), widget]);
+    const layout = getDashboardLayout();
+    layout.order.push(widget.id);
+    layout.hidden = layout.hidden.filter(id => id !== widget.id);
+    saveDashboardLayout(layout);
+    closeModal('customDashboardWidgetModal');
+    renderCustomDashboardWidgets();
+    applyDashboardLayout(layout);
+    showToast('Widget created', 'success');
+}
+
+function configureDashboardWidget(id) {
+    const config = getDashboardWidgetConfig();
+    const current = config[id] || {};
+    let modal = document.getElementById('dashboardWidgetConfigModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'dashboardWidgetConfigModal';
+        modal.className = 'modal';
+        document.body.appendChild(modal);
+    }
+    const isWarranty = id === 'warranty-watch';
+    modal.innerHTML = `<div class="modal-content modal-small"><div class="modal-header"><div><span class="eyebrow">Dashboard settings</span><h2>Configure ${isWarranty ? 'Warranty Watch' : 'Team Notes'}</h2></div><button class="modal-close" onclick="closeModal('dashboardWidgetConfigModal')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label for="dashboardWidgetTitle">Widget title</label><input id="dashboardWidgetTitle" value="${escapeHtml(current.title || (isWarranty ? 'Warranty watch' : 'Team notes'))}" maxlength="60"></div>${isWarranty ? '<div class="form-group"><label for="dashboardWarrantyDays">Show warranties expiring within (days)</label><input id="dashboardWarrantyDays" type="number" min="1" max="3650" value="' + Number(current.warningDays || state.systemSettings?.general?.warrantyWarningDays || 30) + '"></div>' : '<div class="form-group"><label for="dashboardNotesPlaceholder">Notes placeholder</label><input id="dashboardNotesPlaceholder" value="' + escapeHtml(current.placeholder || 'Add a note for your dashboard...') + '" maxlength="120"></div>'}<div class="form-actions"><button type="button" class="btn-secondary" onclick="closeModal('dashboardWidgetConfigModal')">Cancel</button><button type="button" class="btn-primary" onclick="saveDashboardWidgetConfiguration('${id}')">Save changes</button></div></div></div>`;
+    showModal('dashboardWidgetConfigModal');
+}
+
+function saveDashboardWidgetConfiguration(id) {
+    const config = getDashboardWidgetConfig();
+    const isWarranty = id === 'warranty-watch';
+    config[id] = { title: document.getElementById('dashboardWidgetTitle').value.trim() || (isWarranty ? 'Warranty watch' : 'Team notes') };
+    if (isWarranty) config[id].warningDays = Math.max(1, Number(document.getElementById('dashboardWarrantyDays').value) || 30);
+    else config[id].placeholder = document.getElementById('dashboardNotesPlaceholder').value.trim() || 'Add a note for your dashboard...';
+    saveDashboardWidgetConfig(config);
+    const widget = document.querySelector(`[data-dashboard-widget="${id}"]`);
+    if (widget) {
+        widget.dataset.widgetLabel = config[id].title;
+        const heading = widget.querySelector('h2');
+        if (heading) heading.textContent = config[id].title;
+        const notes = widget.querySelector('textarea');
+        if (notes) notes.placeholder = config[id].placeholder;
+    }
+    closeModal('dashboardWidgetConfigModal');
+    showToast('Widget settings saved', 'success');
+}
+
+function getCustomWidgetData(source) {
+    if (source === 'total') return { labels: ['All assets'], values: [state.dashboardMetrics.total || 0] };
+    if (source === 'status' || source === 'warranty') return { labels: ['Available', 'Assigned', 'Maintenance', 'Other'], values: source === 'warranty' ? [state.dashboardMetrics.expiring || 0, Math.max((state.dashboardMetrics.total || 0) - (state.dashboardMetrics.expiring || 0), 0)] : (state.dashboardStatusCounts || [0, 0, 0, 0]) };
+    if (source === 'recent') return { labels: (state.dashboardAssets || []).slice(0, 6).map(asset => asset.name || 'Unnamed'), values: (state.dashboardAssets || []).slice(0, 6).map(() => 1) };
+    if (source === 'software') return { labels: ['Software inventory'], values: [state.dashboardSoftwareCounts?.Software || 0] };
+    return { labels: DASHBOARD_STATS.map(stat => stat.label), values: DASHBOARD_STATS.map(stat => state.dashboardTypeCounts[stat.id] || 0) };
+}
+
+function getWidgetMarkup(widget, data) {
+    if (widget.type === 'kpi') return `<div class="custom-kpi-card"><span class="stat-icon"><i class="fas fa-chart-simple"></i></span><strong>${data.values[0] || 0}</strong><span>${escapeHtml(widget.source === 'total' ? 'Total assets' : widget.title)}</span></div>`;
+    if (widget.type === 'notes') return `<textarea class="dashboard-notes custom-widget-notes" data-notes-id="${widget.id}" placeholder="Add a note for your dashboard...">${escapeHtml(widget.notes || '')}</textarea>`;
+    if (widget.type === 'warranty') return `<div class="dashboard-insight-card"><i class="fas fa-shield-halved"></i><div><strong>${data.values[0] || 0} assets need attention</strong><p>Warranties expiring soon or already expired.</p></div><button class="text-button" onclick="navigateTo('inventoryHealth')">Review <i class="fas fa-arrow-right"></i></button></div>`;
+    if (widget.type === 'table' || widget.type === 'list') return `<div class="table-container"><table class="data-table"><thead><tr><th>${widget.type === 'list' ? 'Rank' : 'Category'}</th><th>Count</th></tr></thead><tbody>${data.labels.map((label, index) => `<tr><td>${widget.type === 'list' ? `${index + 1}. ${escapeHtml(label)}` : escapeHtml(label)}</td><td>${data.values[index] || 0}</td></tr>`).join('')}</tbody></table></div>`;
+    return `<div class="custom-chart-wrap"><canvas id="${widget.id}-chart"></canvas></div>`;
+}
+
+function renderCustomDashboardWidgets() {
+    const canvas = document.getElementById('dashboardCanvas');
+    if (!canvas) return;
+    getCustomDashboardWidgets().forEach(widget => {
+        let element = canvas.querySelector(`[data-dashboard-widget="${widget.id}"]`);
+        if (!element) {
+            element = document.createElement('section');
+            element.className = 'dashboard-widget custom-dashboard-widget';
+            element.dataset.dashboardWidget = widget.id;
+            element.dataset.widgetLabel = widget.title;
+            canvas.appendChild(element);
+        }
+        const data = getCustomWidgetData(widget.source);
+        element.innerHTML = `<div class="widget-controls"><button type="button" class="widget-drag-handle" title="Drag to reorder"><i class="fas fa-grip-vertical"></i></button><button type="button" class="widget-configure-button" onclick="configureDashboardWidget('${widget.id}')" title="Configure widget"><i class="fas fa-gear"></i></button><button type="button" class="widget-hide-button" onclick="toggleDashboardWidget('${widget.id}')" title="Hide widget"><i class="fas fa-eye-slash"></i></button><button type="button" class="widget-delete-button" onclick="removeCustomWidget('${widget.id}')" title="Remove widget"><i class="fas fa-trash"></i></button></div><div class="dashboard-section"><div class="section-heading"><div><span class="eyebrow">Custom widget</span><h2>${escapeHtml(widget.title)}</h2></div><span class="card-meta">${escapeHtml(widget.type)}</span></div><div class="custom-widget-body">${getWidgetMarkup(widget, data)}</div></div>`;
+        const notes = element.querySelector('.custom-widget-notes');
+        if (notes) notes.addEventListener('input', () => { const widgets = getCustomDashboardWidgets(); const saved = widgets.find(item => item.id === widget.id); if (saved) { saved.notes = notes.value; saveCustomDashboardWidgets(widgets); } });
+        if (['pie', 'doughnut', 'bar'].includes(widget.type) && typeof Chart !== 'undefined') {
+            state.charts[widget.id]?.destroy();
+            const context = document.getElementById(`${widget.id}-chart`)?.getContext('2d');
+            if (context) state.charts[widget.id] = new Chart(context, { type: widget.type === 'doughnut' ? 'doughnut' : widget.type, data: { labels: data.labels, datasets: [{ data: data.values, backgroundColor: ['#2563eb', '#059669', '#f59e0b', '#64748b', '#db2777', '#0891b2'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } } });
+        }
+    });
+}
+
+function toggleDashboardEditMode() {
+    state.dashboardEditMode = !state.dashboardEditMode;
+    document.body.classList.toggle('dashboard-editing', state.dashboardEditMode);
+    const toolbar = document.getElementById('dashboardEditToolbar');
+    const button = document.getElementById('dashboardCustomizeButton');
+    if (toolbar) toolbar.hidden = !state.dashboardEditMode;
+    if (button) button.innerHTML = state.dashboardEditMode ? '<i class="fas fa-xmark"></i> Cancel' : '<i class="fas fa-sliders"></i> Customize';
+    document.querySelectorAll('.dashboard-widget').forEach(widget => {
+        widget.draggable = state.dashboardEditMode;
+        widget.classList.toggle('is-editable', state.dashboardEditMode);
+        widget.ondragstart = event => { event.dataTransfer.effectAllowed = 'move'; widget.classList.add('is-dragging'); };
+    });
+    if (!state.dashboardEditMode) {
+        document.getElementById('dashboardWidgetMenu')?.setAttribute('hidden', '');
+        saveDashboardLayout({ ...getDashboardLayout(), order: [...document.querySelectorAll('.dashboard-widget')].map(item => item.dataset.dashboardWidget) });
+    }
+}
+
+function toggleDashboardWidget(id) {
+    const nextLayout = window.toggleDashboardWidgetVisibility
+        ? window.toggleDashboardWidgetVisibility(getDashboardLayout(), id)
+        : { ...getDashboardLayout(), hidden: getDashboardLayout().hidden.includes(id) ? getDashboardLayout().hidden.filter(item => item !== id) : [...getDashboardLayout().hidden, id] };
+    saveDashboardLayout(nextLayout);
+    applyDashboardLayout(nextLayout);
+}
+
+function openDashboardWidgetMenu() {
+    const menu = document.getElementById('dashboardWidgetMenu');
+    if (!menu) return;
+    const layout = getDashboardLayout();
+    menu.innerHTML = `<button type="button" class="btn-primary btn-sm" onclick="openCustomWidgetBuilder(); document.getElementById('dashboardWidgetMenu').hidden = true"><i class="fas fa-wand-magic-sparkles"></i> Create from scratch</button>` + [...DEFAULT_DASHBOARD_WIDGETS, ...getCustomDashboardWidgets().map(widget => widget.id)].map(id => {
+        const label = document.querySelector(`[data-dashboard-widget="${id}"]`)?.dataset.widgetLabel || id;
+        const visible = !layout.hidden.includes(id);
+        return `<label><input type="checkbox" ${visible ? 'checked' : ''} onchange="toggleDashboardWidget('${id}')"> ${escapeHtml(label)}</label>`;
+    }).join('');
+    menu.hidden = !menu.hidden;
+}
+
+function removeCustomWidget(widgetId) {
+    const widgets = window.removeCustomDashboardWidget
+        ? window.removeCustomDashboardWidget(getCustomDashboardWidgets(), widgetId)
+        : getCustomDashboardWidgets().filter((widget) => widget && widget.id !== widgetId);
+    saveCustomDashboardWidgets(widgets);
+    const layout = getDashboardLayout();
+    layout.order = layout.order.filter((id) => id !== widgetId);
+    layout.hidden = layout.hidden.filter((id) => id !== widgetId);
+    saveDashboardLayout(layout);
+    const widget = document.querySelector(`[data-dashboard-widget="${widgetId}"]`);
+    widget?.remove();
+    showToast('Custom widget removed', 'success');
+}
+
+function resetDashboardLayout() {
+    const layout = {
+        order: [...DEFAULT_DASHBOARD_WIDGETS],
+        hidden: [...DEFAULT_HIDDEN_DASHBOARD_WIDGETS],
+    };
+    saveDashboardLayout(layout);
+    applyDashboardLayout(layout);
+    showToast('Dashboard layout reset', 'success');
+}
 
 function setupEnhancedReliability() {
     ['click', 'keydown', 'pointerdown', 'touchstart'].forEach(eventName => {
@@ -94,7 +368,10 @@ function getUserDisplayName(userId) {
 
 function getAssetLocationLabel(asset, meta = null) {
     const metadata = meta || getAssetMeta(asset.assetType || state.editAssetType || state.currentAssetType, asset.id);
-    return metadata?.importSource?.location || metadata?.importSource?.defaultLocation || asset.location_name || asset.locations_name || asset.locations_id || 'Not set';
+    return window.GLPIImportFormat.assetLocationDisplayValue(
+        asset,
+        metadata?.importSource?.location || metadata?.importSource?.defaultLocation || ''
+    );
 }
 
 function getWarrantyCategory(expiry) {
@@ -102,7 +379,7 @@ function getWarrantyCategory(expiry) {
     const time = new Date(expiry).getTime();
     if (Number.isNaN(time)) return 'unknown';
     const days = (time - Date.now()) / 86400000;
-    const warningDays = Number(state.systemSettings?.general?.warrantyWarningDays || 30);
+    const warningDays = Number(getDashboardWidgetConfig()['warranty-watch']?.warningDays || state.systemSettings?.general?.warrantyWarningDays || 30);
     if (days < 0) return 'expired';
     if (days <= warningDays) return 'expiring';
     return 'active';
@@ -149,7 +426,8 @@ function getAssetMeta(apiType, id) {
         assignments: Array.isArray(meta.assignments) ? meta.assignments : [],
         maintenance: Array.isArray(meta.maintenance) ? meta.maintenance : [],
         activities: Array.isArray(meta.activities) ? meta.activities : [],
-        importSource: meta.importSource || {}
+        importSource: meta.importSource || {},
+        pcid: meta.pcid || meta.namingConvention || ''
     };
 }
 
@@ -186,18 +464,109 @@ function dashboardSkeletonRows(count = 5) {
 
 async function loadDashboard() {
     renderStatsGrid();
+    renderSoftwareStatsGrid();
     const recentTable = document.getElementById('recentAssetsTable');
     if (recentTable) recentTable.innerHTML = dashboardSkeletonRows(5);
     try {
         await hydrateAllAssetMeta();
-        await Promise.all([loadDashboardStats(), ensureUsersLoaded()]);
+        await Promise.all([
+            loadDashboardStats(),
+            loadDashboardSoftware(),
+            ensureUsersLoaded()
+        ]);
         await loadRecentAssets();
+        const warrantyCount = document.getElementById('dashboardWarrantyCount');
+        if (warrantyCount) warrantyCount.textContent = `${state.dashboardMetrics.expiring || 0} assets`;
         initCharts();
+        renderCustomDashboardWidgets();
         checkAlerts();
     } catch (error) {
         const message = formatApiError(error);
         if (recentTable) recentTable.innerHTML = `<tr><td colspan="5">${renderInlineError(message, 'loadDashboard()')}</td></tr>`;
         showToast(message, 'error');
+    }
+}
+
+function renderSoftwareStatsGrid() {
+    const container = document.getElementById('softwareStatsGrid');
+    if (!container) return;
+    container.innerHTML = DASHBOARD_SOFTWARE_STATS.map(stat => `
+        <button class="stat-card software-kpi" onclick="navigateTo('${stat.view}')" style="--stat-color:#059669;--stat-tint:rgba(5,150,105,.12)" aria-label="${stat.label}">
+            <span class="stat-icon"><i class="fas fa-cube"></i></span>
+            <span class="stat-info">
+                <span class="stat-value" id="${stat.id}">-</span>
+                <span class="stat-label">${stat.label}</span>
+            </span>
+        </button>
+    `).join('');
+}
+
+async function loadDashboardSoftware() {
+    const results = await Promise.all(DASHBOARD_SOFTWARE_STATS.map(async stat => {
+        try {
+            const items = await glpi.getItems(stat.api);
+            return { stat, list: Array.isArray(items) ? items : [] };
+        } catch (error) {
+            console.error(`Unable to load ${stat.label}:`, error);
+            return { stat, list: [] };
+        }
+    }));
+
+    state.dashboardSoftwareCounts = {};
+    results.forEach(({ stat, list }) => {
+        state.dashboardSoftwareCounts[stat.api] = list.length;
+        const element = document.getElementById(stat.id);
+        if (element) element.textContent = list.length;
+    });
+
+    renderSoftwareList();
+}
+
+function renderSoftwareList() {
+    const tbody = document.getElementById('softwareList');
+    if (!tbody) return;
+
+    try {
+        const matrixData = state.softwareMatrixData || [];
+        if (!matrixData || !Array.isArray(matrixData.installations) || !matrixData.installations.length) {
+            tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state compact"><i class="fas fa-software-stack"></i><h3>No software data</h3><p>Software inventory data is not available.</p></div></td></tr>';
+            return;
+        }
+
+        const { software = [], installations = [], versions = [] } = matrixData;
+        const installCounts = {};
+        const versionCounts = {};
+
+        installations.forEach(inst => {
+            const sid = inst.softwares_id || inst.software_id || inst.items_id || 'unknown';
+            installCounts[sid] = (installCounts[sid] || 0) + 1;
+        });
+        versions.forEach(ver => {
+            const sid = ver.softwares_id || ver.software_id || ver.items_id || 'unknown';
+            versionCounts[sid] = (versionCounts[sid] || 0) + 1;
+        });
+
+        const rows = software
+            .map(sw => ({
+                id: sw.id,
+                name: sw.name || 'Unnamed',
+                installs: installCounts[sw.id] || 0,
+                versions: versionCounts[sw.id] || 0,
+                computers: new Set(installations.filter(i => (i.softwares_id || i.software_id || i.items_id) === String(sw.id)).map(i => i.items_id)).size || 0
+            }))
+            .sort((a, b) => b.installs - a.installs)
+            .slice(0, 8);
+
+        tbody.innerHTML = rows.map(sw => `
+            <tr onclick="navigateTo('softwareMatrix')" style="cursor: pointer;">
+                <td data-label="Software"><strong>${escapeHtml(sw.name)}</strong></td>
+                <td data-label="Installs">${sw.installs}</td>
+                <td data-label="Computers">${sw.computers}</td>
+                <td data-label="Versions">${sw.versions}</td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="4">${renderInlineError('Unable to load software list')}</td></tr>`;
     }
 }
 
@@ -222,21 +591,26 @@ async function loadDashboardStats() {
     state.dashboardTypeCounts = {};
     state.dashboardAssets = [];
 
-    const results = await Promise.all(DASHBOARD_STATS.map(async stat => {
+    const apiTypes = [...new Set(DASHBOARD_STATS.map(stat => stat.api))];
+    const results = await Promise.all(apiTypes.map(async apiType => {
         try {
-            const items = await glpi.getItems(stat.api);
-            return { stat, list: Array.isArray(items) ? items : [] };
+            const items = await glpi.getItems(apiType);
+            return { apiType, list: Array.isArray(items) ? items : [] };
         } catch (error) {
-            console.error(`Unable to load ${stat.label}:`, error);
-            return { stat, list: [], error };
+            console.error(`Unable to load dashboard assets for ${apiType}:`, error);
+            return { apiType, list: [], error };
         }
     }));
 
-    results.forEach(({ stat, list }) => {
-        state.dashboardTypeCounts[stat.api] = list.length;
+    const itemsByApi = new Map(results.map(({ apiType, list }) => [apiType, list]));
+    DASHBOARD_STATS.forEach(stat => {
+        const list = (itemsByApi.get(stat.api) || [])
+            .map(item => ({ ...item, assetType: stat.api }))
+            .filter(asset => !stat.category || isAssetInCategory(asset, stat.category));
+        state.dashboardTypeCounts[stat.id] = list.length;
         metrics.total += list.length;
-        list.forEach(item => {
-            const asset = { ...item, assetType: stat.api };
+        list.forEach(asset => {
+            const item = asset;
             state.dashboardAssets.push(asset);
             const status = normalizeAssetStatus(asset);
             const assigned = getAssetUserId(asset) > 0 || status === 1;
@@ -360,8 +734,11 @@ async function loadAssetList(type) {
     if (!assetType) return;
     try {
         await Promise.all([hydrateAllAssetMeta(), ensureUsersLoaded()]);
-        const items = await glpi.getItems(assetType.api);
-        state.assets = (Array.isArray(items) ? items : []).map(item => ({ ...item, assetType: assetType.api }));
+        const items = await glpi.getItems(assetType.api, { add_keys_names: ['locations_id'] });
+        const assets = (Array.isArray(items) ? items : []).map(item => ({ ...item, assetType: assetType.api }));
+        state.assets = assetType.category
+            ? assets.filter(item => isAssetInCategory(item, assetType.category))
+            : assets;
         state.currentPage = 1;
         state.selectedAssets.clear();
         populateLocationFilter();
@@ -369,6 +746,22 @@ async function loadAssetList(type) {
     } catch (error) {
         tbody.innerHTML = `<tr><td colspan="9">${renderInlineError(formatApiError(error), `loadAssetList('${type}')`)}</td></tr>`;
     }
+}
+
+function isAssetInCategory(asset, category) {
+    const source = getAssetMeta(asset.assetType || 'Computer', asset.id).importSource || {};
+    const importRow = {
+        ...source,
+        itemtype: source.assetType || asset.assetType,
+        name: asset.name,
+        model: source.model || asset.computermodels_name || asset.peripheraltypes_name || asset.name,
+        category: source.category,
+        asset_category: source.category
+    };
+    if (['CPU', 'Laptops', 'UPS', 'Peripherals'].includes(category)) {
+        return window.GLPIImportFormat.matchesDashboardCategory(importRow, category);
+    }
+    return true;
 }
 
 function populateLocationFilter() {
@@ -390,7 +783,7 @@ function getFilteredAssets() {
 
     const filtered = state.assets.filter(asset => {
         const meta = getAssetMeta(asset.assetType, asset.id);
-        const haystack = [asset.name, asset.serial, asset.otherserial, asset.comment, getAssetLocationLabel(asset, meta), getUserDisplayName(getAssetUserId(asset))].join(' ').toLowerCase();
+        const haystack = [asset.name, asset.serial, asset.otherserial, asset.comment, meta.pcid, getAssetLocationLabel(asset, meta), getUserDisplayName(getAssetUserId(asset))].join(' ').toLowerCase();
         if (search && !haystack.includes(search)) return false;
         if (status !== '' && String(normalizeAssetStatus(asset)) !== status) return false;
         const assigned = getAssetUserId(asset) > 0 || normalizeAssetStatus(asset) === 1;
@@ -417,6 +810,7 @@ function renderAssetTable() {
     if (!tbody || !header) return;
     const assetType = ASSET_TYPES[state.currentAssetType];
     const isStock = Boolean(assetType?.stock);
+    const hasPCID = ['Computer', 'Printer'].includes(assetType?.api);
     state.filteredAssets = getFilteredAssets();
     const totalPages = Math.max(1, Math.ceil(state.filteredAssets.length / state.itemsPerPage));
     if (state.currentPage > totalPages) state.currentPage = totalPages;
@@ -425,10 +819,10 @@ function renderAssetTable() {
 
     header.innerHTML = isStock
         ? '<tr><th><input type="checkbox" id="headerCheckbox" onchange="toggleHeaderCheckbox()" aria-label="Select page"></th><th>Name</th><th>Reference</th><th>Stock</th><th>Stock health</th><th>Location</th><th>Value</th><th>Modified</th><th>Actions</th></tr>'
-        : '<tr><th><input type="checkbox" id="headerCheckbox" onchange="toggleHeaderCheckbox()" aria-label="Select page"></th><th>Asset</th><th>Status</th><th>Assigned to</th><th>Location</th><th>Warranty</th><th>Value</th><th>Modified</th><th>Actions</th></tr>';
+        : `<tr><th><input type="checkbox" id="headerCheckbox" onchange="toggleHeaderCheckbox()" aria-label="Select page"></th><th>Assigned to</th><th>Location</th><th>Asset Tag</th><th>Asset</th>${hasPCID ? '<th>PCID</th>' : ''}<th>Status</th><th>Warranty</th><th>Value</th><th>Modified</th><th>Actions</th></tr>`;
 
     if (!paginated.length) {
-        tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><i class="fas fa-box-open"></i><h3>No matching assets</h3><p>Adjust the filters or add a new ${escapeHtml(assetType?.name || 'asset')}.</p><button class="btn-primary btn-sm" onclick="showCreateModal('${assetType.api}')"><i class="fas fa-plus"></i> Add asset</button></div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${isStock ? 9 : (hasPCID ? 11 : 10)}"><div class="empty-state"><i class="fas fa-box-open"></i><h3>No matching assets</h3><p>Adjust the filters or add a new ${escapeHtml(assetType?.name || 'asset')}.</p><button class="btn-primary btn-sm" onclick="showCreateModal('${assetType.api}')"><i class="fas fa-plus"></i> Add asset</button></div></td></tr>`;
     } else {
         tbody.innerHTML = paginated.map(asset => renderAssetRow(asset, assetType, isStock)).join('');
     }
@@ -448,7 +842,8 @@ function renderAssetRow(asset, assetType, isStock) {
         return `<tr><td><input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleAssetSelection(${asset.id})"></td><td data-label="Name"><div class="asset-name-cell"><strong>${escapeHtml(asset.name || 'Unnamed')}</strong><small>${escapeHtml(asset.otherserial || asset.serial || '')}</small></div></td><td data-label="Reference">${escapeHtml(asset.ref || asset.reference || asset.otherserial || '-')}</td><td data-label="Stock"><span class="${lowStock ? 'stock-low' : ''}">${stock}</span></td><td data-label="Stock health">${lowStock ? '<span class="status-badge maintenance"><span class="status-dot"></span>Low</span>' : '<span class="status-badge available"><span class="status-dot"></span>Healthy</span>'}</td><td data-label="Location">${escapeHtml(String(getAssetLocationLabel(asset, meta)))}</td><td data-label="Value">${value}</td><td data-label="Modified">${formatRelativeDate(asset.date_mod || asset.date_creation)}</td>${actions}</tr>`;
     }
     const assigned = getAssetUserId(asset);
-    return `<tr><td><input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleAssetSelection(${asset.id})"></td><td data-label="Asset"><div class="asset-name-cell"><strong>${escapeHtml(asset.name || 'Unnamed')}</strong><small>${escapeHtml(asset.serial || asset.otherserial || `GLPI #${asset.id}`)}</small></div></td><td data-label="Status">${getStatusBadge(asset)}</td><td data-label="Assigned to"><span class="assignee-cell"><i class="fas fa-user"></i>${escapeHtml(getUserDisplayName(assigned))}</span></td><td data-label="Location">${escapeHtml(String(getAssetLocationLabel(asset, meta)))}</td><td data-label="Warranty">${renderWarrantyBadge(meta.financial.warrantyExpiry)}</td><td data-label="Value">${value}</td><td data-label="Modified">${formatRelativeDate(asset.date_mod || asset.date_creation)}</td>${actions}</tr>`;
+    const pcid = ['Computer', 'Printer'].includes(assetType.api) ? `<td data-label="PCID">${escapeHtml(meta.pcid || '-')}</td>` : '';
+    return `<tr><td><input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleAssetSelection(${asset.id})"></td><td data-label="Assigned to"><span class="assignee-cell"><i class="fas fa-user"></i>${escapeHtml(getUserDisplayName(assigned))}</span></td><td data-label="Location">${escapeHtml(String(getAssetLocationLabel(asset, meta)))}</td><td data-label="Asset Tag">${escapeHtml(asset.otherserial || '-')}</td><td data-label="Asset"><div class="asset-name-cell"><strong>${escapeHtml(asset.name || 'Unnamed')}</strong><small>${escapeHtml(asset.serial || `GLPI #${asset.id}`)}</small></div></td>${pcid}<td data-label="Status">${getStatusBadge(asset)}</td><td data-label="Warranty">${renderWarrantyBadge(meta.financial.warrantyExpiry)}</td><td data-label="Value">${value}</td><td data-label="Modified">${formatRelativeDate(asset.date_mod || asset.date_creation)}</td>${actions}</tr>`;
 }
 
 function renderWarrantyBadge(expiry) {
@@ -694,7 +1089,7 @@ window.confirmDelete = confirmDelete;
 
 async function viewAsset(apiType, id) {
     try {
-        const item = await glpi.getItem(apiType, id);
+        const item = await glpi.getItem(apiType, id, { add_keys_names: ['locations_id'] });
         item.assetType = apiType;
         await Promise.all([hydrateAssetMeta(apiType, id), ensureUsersLoaded()]);
         state.viewedAsset = { apiType, id: Number(id), name: item.name || 'Asset', item };
@@ -708,11 +1103,12 @@ async function viewAsset(apiType, id) {
         `;
         document.getElementById('assetDetailsTab').innerHTML = `
             <div class="detail-grid">
-                <div class="detail-section"><h3>Identification</h3>${detailRow('Asset name', item.name || 'N/A')}${detailRow('Serial number', item.serial || 'N/A')}${detailRow('Inventory number', item.otherserial || 'N/A')}${detailRow('GLPI ID', item.id)}</div>
+                <div class="detail-section"><h3>Identification</h3>${detailRow('Asset name', item.name || 'N/A')}${detailRow('Serial number', item.serial || 'N/A')}${detailRow('Inventory number', item.otherserial || 'N/A')}${['Computer', 'Printer'].includes(apiType) ? detailRow('PCID', meta.pcid || 'N/A') : ''}${detailRow('GLPI ID', item.id)}</div>
                 <div class="detail-section"><h3>Ownership</h3>${detailRow('Assigned to', getUserDisplayName(assignedUserId))}${detailRow('Location', getAssetLocationLabel(item, meta))}${detailRow('Status', STATUS_MAP[normalizeAssetStatus(item)]?.label || normalizeAssetStatus(item))}</div>
                 <div class="detail-section"><h3>Lifecycle</h3>${detailRow('Created', formatDate(item.date_creation))}${detailRow('Last modified', formatDate(item.date_mod))}${detailRow('Warranty', getWarrantyStatus(meta.financial.warrantyExpiry).label)}</div>
                 <div class="detail-section"><h3>Classification</h3>${detailRow('Type', item.type || item.computertypes_id || 'N/A')}${detailRow('Model', item.model_name || item.computermodels_id || 'N/A')}${detailRow('Supplier', meta.financial.supplier || 'N/A')}</div>
             </div>
+            ${apiType === 'Computer' && ['processor', 'ramInstalled', 'operatingSystem', 'officeSuite', 'lifespan', 'status', 'assetCondition'].some(key => meta.importSource?.[key]) ? `<div class="detail-section"><h3>Imported computer details</h3>${detailRow('Processor', meta.importSource.processor || 'N/A')}${detailRow('RAM installed', meta.importSource.ramInstalled || 'N/A')}${detailRow('Windows (OS)', meta.importSource.operatingSystem || 'N/A')}${detailRow('Office suite', meta.importSource.officeSuite || 'N/A')}${detailRow('Lifespan', meta.importSource.lifespan || 'N/A')}${detailRow('Imported status', meta.importSource.status || 'N/A')}${detailRow('Asset condition', meta.importSource.assetCondition || 'N/A')}</div>` : ''}
             ${item.comment ? `<div class="detail-section detail-comments"><h3>Comments</h3><p>${escapeHtml(item.comment)}</p></div>` : ''}
         `;
         renderFinancialTab(meta.financial);
@@ -1275,20 +1671,26 @@ function renderActivityTimeline(item, meta) {
 
 async function editAsset(apiType, id) {
     try {
-        const item = await glpi.getItem(apiType, id);
+        const item = await glpi.getItem(apiType, id, { add_keys_names: ['locations_id'] });
         await hydrateAssetMeta(apiType, id);
         const meta = getAssetMeta(apiType, id);
         state.editAssetId = Number(id);
         state.editAssetType = apiType;
+        const pcidGroup = document.getElementById('assetPCIDGroup');
+        if (pcidGroup) pcidGroup.style.display = ['Computer', 'Printer'].includes(apiType) ? '' : 'none';
         document.getElementById('createModalTitle').textContent = `Edit ${item.name || 'Asset'}`;
         document.getElementById('assetName').value = item.name || '';
         document.getElementById('assetStatus').value = normalizeAssetStatus(item);
         document.getElementById('assetType').value = item.type || '';
-        document.getElementById('assetLocation').value = item.locations_id || meta.importSource.location || '';
+        document.getElementById('assetLocation').value = window.GLPIImportFormat.assetLocationDisplayValue(
+            item,
+            meta.importSource.location || meta.importSource.defaultLocation || ''
+        );
         document.getElementById('assetSerial').value = item.serial || '';
         document.getElementById('assetInventory').value = item.otherserial || '';
         document.getElementById('assetComments').value = item.comment || '';
         fillFinancialForm(meta.financial);
+        fillPCIDForm(meta.pcid);
         fillStockForm(meta.stock);
         showModal('createModal');
     } catch (error) {
@@ -1318,16 +1720,22 @@ async function handleCreateAsset(event) {
         }
         const financial = readFinancialForm();
         const stock = readStockForm();
+        const pcid = ['Computer', 'Printer'].includes(state.editAssetType) ? readPCIDForm() : '';
         if (state.editAssetId) {
             await glpi.updateItem(state.editAssetType, state.editAssetId, data);
-            await saveAssetMeta(state.editAssetType, state.editAssetId, { financial, stock });
+            await saveAssetMeta(state.editAssetType, state.editAssetId, {
+                financial,
+                stock,
+                pcid,
+                importSource: { ...getAssetMeta(state.editAssetType, state.editAssetId).importSource, location: locationValue }
+            });
             await appendAssetActivity(state.editAssetType, state.editAssetId, { type: 'updated', title: 'Asset details updated', description: 'Core, financial or stock information changed.' });
             showToast('Asset updated successfully.', 'success');
         } else {
             const created = await glpi.createItem(state.editAssetType, data);
             const createdId = extractItemId(created);
             if (!createdId) throw new Error('GLPI created the item but did not return its ID.');
-            await saveAssetMeta(state.editAssetType, createdId, { financial, stock });
+            await saveAssetMeta(state.editAssetType, createdId, { financial, stock, pcid });
             await appendAssetActivity(state.editAssetType, createdId, { type: 'created', title: 'Asset created', description: `${data.name} was registered in GLPI.` });
             showToast('Asset created successfully.', 'success');
         }
@@ -1439,33 +1847,22 @@ window.showAssignViewedAsset = showAssignViewedAsset;
 async function checkAlerts() {
     state.alerts = [];
     const assets = state.dashboardAssets.length ? state.dashboardAssets : [];
+    const lowStockEnabled = state.systemSettings?.general?.lowStockAlertsEnabled ?? true;
     assets.forEach(asset => {
         const meta = getAssetMeta(asset.assetType, asset.id);
         if (normalizeAssetStatus(asset) === 3) {
-            state.alerts.push({ type: 'danger', title: 'Asset under maintenance', desc: `${asset.name || 'Unnamed asset'} (${getAssetTypeLabel(asset.assetType)}) requires attention`, time: asset.date_mod || new Date().toISOString() });
+            addAlert('Asset under maintenance', `${asset.name || 'Unnamed asset'} (${getAssetTypeLabel(asset.assetType)}) requires attention`, 'danger', `maintenance-${asset.assetType}-${asset.id}`, { type: 'asset', apiType: asset.assetType, id: asset.id });
         }
         const warranty = getWarrantyCategory(meta.financial.warrantyExpiry);
         if (warranty === 'expiring') {
-            state.alerts.push({ type: 'warning', title: 'Warranty expiring', desc: `${asset.name || 'Unnamed asset'} warranty expires ${formatDate(meta.financial.warrantyExpiry)}`, time: new Date().toISOString() });
+            addAlert('Warranty expiring', `${asset.name || 'Unnamed asset'} warranty expires ${formatDate(meta.financial.warrantyExpiry)}`, 'warning', `warranty-expiring-${asset.assetType}-${asset.id}`, { type: 'asset', apiType: asset.assetType, id: asset.id });
         } else if (warranty === 'expired') {
-            state.alerts.push({ type: 'info', title: 'Warranty expired', desc: `${asset.name || 'Unnamed asset'} is no longer under warranty`, time: new Date().toISOString() });
+            addAlert('Warranty expired', `${asset.name || 'Unnamed asset'} is no longer under warranty`, 'info', `warranty-expired-${asset.assetType}-${asset.id}`, { type: 'asset', apiType: asset.assetType, id: asset.id });
         }
-        if (meta.stock.quantity !== '' && Number(meta.stock.quantity) <= Number(meta.stock.threshold || 5)) {
-            state.alerts.push({ type: 'warning', title: 'Low stock', desc: `${asset.name || 'Stock item'} is at or below its reorder threshold`, time: new Date().toISOString() });
+        if (lowStockEnabled && ASSET_TYPES[asset.assetType]?.stock && meta.stock.quantity !== '' && Number(meta.stock.quantity) <= Number(meta.stock.threshold || 5)) {
+            addAlert('Low stock', `${getAssetTypeLabel(asset.assetType)} reorder threshold reached (qty: ${meta.stock.quantity || 0}, threshold: ${meta.stock.threshold || 5})`, 'warning', `lowstock-${asset.assetType}-${asset.id}`, { type: 'asset', apiType: asset.assetType, id: asset.id });
         }
     });
-    const dangerCount = state.alerts.filter(alert => alert.type === 'danger').length;
-    const warningCount = state.alerts.filter(alert => alert.type === 'warning').length;
-    const infoCount = state.alerts.filter(alert => alert.type === 'info').length;
-    setTextIfPresent('warningCount', warningCount);
-    setTextIfPresent('dangerCount', dangerCount);
-    setTextIfPresent('infoCount', infoCount);
-    const banner = document.getElementById('alertsBanner');
-    if (banner) {
-        const total = state.alerts.length;
-        banner.style.display = total ? 'flex' : 'none';
-        setTextIfPresent('alertsBannerText', `${total} item${total === 1 ? '' : 's'} need attention`);
-    }
     updateNotificationBadge();
 }
 window.checkAlerts = checkAlerts;
@@ -1516,6 +1913,7 @@ function assetToExportRow(asset, apiType, label = apiType) {
         Supplier: meta.financial.supplier || '',
         Stock: meta.stock.quantity || '',
         LowStockThreshold: meta.stock.threshold || '',
+        PCID: meta.pcid || '',
         AssignmentRecords: meta.assignments.length,
         MaintenanceRecords: meta.maintenance.length,
         Documents: meta.documents.length,

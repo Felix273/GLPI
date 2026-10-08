@@ -26,7 +26,7 @@
                             <option value="0">Available</option><option value="1">Assigned</option><option value="2">Retired</option><option value="3">Maintenance</option>
                         </select>
                         <select id="assignmentFilter" onchange="filterAssets()"><option value="">Any assignment</option><option value="assigned">Assigned</option><option value="unassigned">Unassigned</option></select>
-                        <select id="locationFilter" onchange="filterAssets()"><option value="">All locations</option></select>
+                        <select id="locationFilter" data-searchable onchange="filterAssets()"><option value="">All locations</option></select>
                         <select id="warrantyFilter" onchange="filterAssets()"><option value="">Any warranty</option><option value="active">Active</option><option value="expiring">Expiring in 30 days</option><option value="expired">Expired</option><option value="unknown">Not recorded</option></select>
                         <select id="sortFilter" onchange="filterAssets()"><option value="modified_desc">Recently modified</option><option value="name_asc">Name A–Z</option><option value="name_desc">Name Z–A</option><option value="status_asc">Status</option><option value="value_desc">Highest value</option></select>
                         <select id="pageSizeFilter" onchange="changePageSize()"><option value="10">10 per page</option><option value="25">25 per page</option><option value="50">50 per page</option><option value="100">100 per page</option></select>

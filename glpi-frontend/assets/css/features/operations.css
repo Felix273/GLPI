@@ -503,6 +503,11 @@
     background: rgba(245, 158, 11, .14);
 }
 
+.inventory-health-chip.aging {
+    color: #ca8a04;
+    background: rgba(250, 204, 21, .12);
+}
+
 .inventory-health-chip.critical {
     color: #b91c1c;
     background: rgba(239, 68, 68, .12);
@@ -644,7 +649,339 @@
         flex-direction: column;
     }
 
-    .inventory-software-tools input {
-        width: 100%;
+     .inventory-software-tools input {
+         width: 100%;
+     }
+ }
+
+/* ==========================================================================
+   SLA / Licences view
+   ========================================================================== */
+.sla-mode-selector {
+    margin-bottom: 24px;
+}
+
+.mode-buttons {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.btn-mode {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 20px 16px;
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.btn-mode:hover {
+    border-color: var(--primary);
+    background: var(--bg-subtle);
+}
+
+.btn-mode.active,
+.btn-mode:focus-visible {
+    border-color: var(--primary);
+    background: rgba(37, 99, 235, 0.06);
+    color: var(--primary);
+}
+
+.btn-mode i {
+    font-size: 22px;
+}
+
+.mode-hint {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.sla-upload-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 24px;
+    overflow: hidden;
+}
+
+.upload-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px 12px;
+    background: var(--bg-subtle);
+    border-bottom: 1px solid var(--border);
+}
+
+.upload-card-header .eyebrow {
+    color: var(--text-secondary);
+}
+
+.upload-card-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.sla-upload-card .modal-body {
+    padding: 20px;
+}
+
+.sla-records-section {
+    margin-top: 8px;
+}
+
+.records-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.records-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.records-count {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.record-chip {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
+.record-chip-sla {
+    background: rgba(5, 150, 105, 0.12);
+    color: #059669;
+}
+
+.record-chip-license {
+    background: rgba(202, 138, 4, 0.12);
+    color: #ca8a04;
+}
+
+.supplier-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.supplier-input-group select,
+.supplier-input-group input {
+    width: 100%;
+}
+
+.supplier-input-group .supplier-new-input {
+    margin-top: 6px;
+}
+
+.select-search-input {
+    width: 100%;
+    margin-bottom: 6px;
+}
+
+.owner-manual-input {
+    margin-top: 6px;
+}
+
+.document-list-inline {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.document-item-inline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: var(--bg-subtle);
+    border-radius: 8px;
+}
+
+.document-item-inline .doc-icon {
+    font-size: 20px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.doc-image-preview {
+    max-width: 80px;
+    max-height: 60px;
+    border-radius: 6px;
+    object-fit: cover;
+    border: 1px solid var(--border);
+}
+
+@media (max-width: 700px) {
+    .mode-buttons {
+        flex-direction: column;
     }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .document-list-inline {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .document-item-inline {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px;
+        background: var(--bg-subtle);
+        border-radius: 8px;
+    }
+
+    .document-item-inline .doc-icon {
+        font-size: 20px;
+        color: var(--text-secondary);
+    }
+}
+
+/* SLA and software license register */
+.sla-page-header {
+    align-items: flex-end;
+    gap: 24px;
+    margin-bottom: 22px;
+}
+
+.sla-page-header h1 { margin-top: 7px; }
+.sla-page-header p { max-width: 620px; margin-top: 7px; color: var(--text-secondary); font-size: 12px; }
+.sla-page-actions { flex-wrap: wrap; }
+.sla-page-actions button { display: inline-flex; align-items: center; gap: 8px; }
+
+.sla-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-bottom: 30px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-card);
+}
+
+.sla-summary-item { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 17px 19px; }
+.sla-summary-item + .sla-summary-item { border-left: 1px solid var(--border); }
+.sla-summary-icon { display: grid; flex: 0 0 36px; width: 36px; height: 36px; place-items: center; border-radius: 10px; color: var(--primary); background: var(--primary-soft); }
+.sla-summary-icon.sla-summary-active { color: var(--success); background: color-mix(in srgb, var(--success) 12%, var(--bg-card)); }
+.sla-summary-icon.sla-summary-warning { color: var(--warning); background: color-mix(in srgb, var(--warning) 12%, var(--bg-card)); }
+.sla-summary-icon.sla-summary-expired { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, var(--bg-card)); }
+.sla-summary-item small, .sla-summary-item strong { display: block; }
+.sla-summary-item small { color: var(--text-secondary); font-size: 10px; }
+.sla-summary-item strong { margin-top: 2px; color: var(--text-primary); font-size: 21px; line-height: 1.2; }
+
+.sla-form-panel {
+    margin-bottom: 24px;
+    padding: 20px 22px 18px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--primary);
+    border-radius: 10px;
+    background: var(--bg-card);
+    box-shadow: var(--shadow-xs);
+}
+
+.sla-form-panel[hidden] { display: none; }
+.sla-form-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.sla-form-heading h2 { margin-top: 5px; color: var(--text-primary); font-size: 17px; }
+.sla-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; }
+.sla-form-grid .form-group { min-width: 0; margin-bottom: 14px; }
+.sla-form-grid .form-group small { display: block; margin-top: 5px; color: var(--text-secondary); font-size: 10px; }
+.sla-input-unit { display: flex; align-items: center; gap: 10px; }
+.sla-input-unit input { min-width: 0; flex: 1; }
+.sla-input-unit span { color: var(--text-secondary); font-size: 11px; }
+.sla-form-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 4px; }
+
+.sla-records-section { margin-top: 4px; }
+.sla-records-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.sla-records-heading h2 { color: var(--text-primary); font-size: 17px; }
+.sla-records-heading p { margin-top: 4px; color: var(--text-secondary); font-size: 11px; }
+.records-count { white-space: nowrap; }
+.sla-record-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.sla-type-tabs { display: inline-flex; flex: 0 0 auto; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg-subtle); }
+.sla-type-tab { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; padding: 5px 10px; border: 0; border-radius: 6px; color: var(--text-secondary); background: transparent; font-size: 11px; font-weight: 650; cursor: pointer; }
+.sla-type-tab span { min-width: 18px; padding: 1px 5px; border-radius: 10px; color: var(--text-secondary); background: var(--bg-hover); font-size: 9px; text-align: center; }
+.sla-type-tab.active { color: var(--text-primary); background: var(--bg-card); box-shadow: var(--shadow-xs); }
+.sla-type-tab.active span { color: var(--primary); background: var(--primary-soft); }
+.sla-record-filters { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.sla-search { display: flex; align-items: center; gap: 8px; width: min(310px, 32vw); min-width: 190px; height: 36px; padding: 0 11px; border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); background: var(--bg-card); }
+.sla-search:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent); }
+.sla-search input { width: 100%; min-width: 0; padding: 0; border: 0; outline: 0; color: var(--text-primary); background: transparent; font-size: 11px; }
+.sla-search input:focus { box-shadow: none; }
+.sla-record-filters select { width: auto; min-width: 132px; height: 36px; padding: 0 28px 0 10px; border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); background: var(--bg-card); font-size: 11px; }
+.sla-table-container { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-card); }
+.sla-record-table { width: 100%; min-width: 810px; margin: 0; }
+.sla-record-table th { height: 39px; padding: 9px 13px; white-space: nowrap; }
+.sla-record-table td { padding: 12px 13px; vertical-align: middle; }
+.sla-record-table td:nth-child(2) { min-width: 190px; color: var(--text-primary); }
+.sla-record-table td:nth-child(5) { min-width: 190px; white-space: normal; }
+.sla-record-table td:last-child, .sla-record-table th:last-child { width: 48px; text-align: center; }
+.sla-record-subtitle { display: block; margin-top: 3px; color: var(--text-muted); font-size: 10px; font-weight: 450; }
+.sla-status { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 10px; font-weight: 650; }
+.sla-status > i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.sla-status-active { color: var(--success); }
+.sla-status-upcoming { color: var(--info); }
+.sla-status-expiring { color: var(--warning); }
+.sla-status-expired { color: var(--danger); }
+.sla-status-undated { color: var(--text-muted); }
+.sla-documents-section { margin-top: 24px; }
+
+@media (max-width: 980px) {
+    .sla-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sla-summary-item:nth-child(3) { border-left: 0; border-top: 1px solid var(--border); }
+    .sla-summary-item:nth-child(4) { border-top: 1px solid var(--border); }
+    .sla-record-toolbar { align-items: stretch; flex-direction: column; }
+    .sla-record-filters { justify-content: space-between; }
+    .sla-search { width: 100%; }
+}
+
+@media (max-width: 700px) {
+    .sla-page-header { align-items: flex-start; flex-direction: column; }
+    .sla-page-actions { width: 100%; }
+    .sla-page-actions button { flex: 1; justify-content: center; }
+    .sla-summary-item { padding: 13px 12px; }
+    .sla-summary-item small { font-size: 9px; }
+    .sla-summary-item strong { font-size: 18px; }
+    .sla-form-panel { padding: 16px 14px; }
+    .sla-form-grid { grid-template-columns: minmax(0, 1fr); }
+    .sla-records-heading { align-items: flex-start; flex-direction: column; }
+    .sla-record-toolbar { gap: 10px; }
+    .sla-type-tabs { width: 100%; }
+    .sla-type-tab { flex: 1; justify-content: center; }
+    .sla-record-filters { align-items: stretch; flex-direction: column; }
+    .sla-record-filters select { width: 100%; }
+    .sla-record-table { min-width: 0; }
+    .sla-record-table thead { display: none; }
+    .sla-record-table tbody, .sla-record-table tr, .sla-record-table td { display: block; width: 100%; }
+    .sla-record-table tr { position: relative; padding: 10px 42px 10px 13px; border-bottom: 1px solid var(--border); }
+    .sla-record-table tr:last-child { border-bottom: 0; }
+    .sla-record-table td { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; min-width: 0 !important; padding: 5px 0; border: 0; text-align: right; white-space: normal !important; }
+    .sla-record-table td::before { flex: 0 0 105px; color: var(--text-muted); content: attr(data-label); font-size: 9px; font-weight: 750; text-align: left; text-transform: uppercase; }
+    .sla-record-table td:last-child { position: absolute; top: 8px; right: 8px; width: auto; padding: 0; }
+    .sla-record-table td:last-child::before { display: none; }
 }

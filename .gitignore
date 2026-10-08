@@ -26,6 +26,20 @@ temp/
 vendor/
 
 # ===========================
+# Test artifacts
+# ===========================
+.phpunit.cache/
+.phpunit.result.cache
+
+# ===========================
+# Docker secrets (never commit real secrets)
+# ===========================
+secrets/glpi_db_password
+secrets/settings_secret_key
+!secrets/README.md
+!secrets/*.example
+
+# ===========================
 # Node Dependencies
 # ===========================
 node_modules/
@@ -90,11 +104,6 @@ glpi/files/_uploads/
 # Docker
 # ===========================
 docker-compose.override.yml
-
-# ===========================
-# Coverage
-# ===========================
-coverage/
 
 # ===========================
 # Miscellaneous

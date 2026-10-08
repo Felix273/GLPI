@@ -164,13 +164,26 @@ class GLPIClient {
         if (!this.backendAuthenticated) {
             throw new Error('Not authenticated with GLPI. Please sign in again.');
         }
-        const data = await this.backendRequest('/backend/session');
-        if (!data.authenticated) {
-            this.sessionToken = null;
-            this.backendAuthenticated = false;
-            throw new Error('Not authenticated with GLPI. Please sign in again.');
+        const now = Date.now();
+        if (this._lastSessionCheck && (now - this._lastSessionCheck) < 30000) {
+            return true;
         }
-        return true;
+        if (!this._sessionCheckPromise) {
+            this._sessionCheckPromise = this.backendRequest('/backend/session')
+                .then(data => {
+                    if (!data.authenticated) {
+                        this.sessionToken = null;
+                        this.backendAuthenticated = false;
+                        throw new Error('Not authenticated with GLPI. Please sign in again.');
+                    }
+                    this._lastSessionCheck = Date.now();
+                    return true;
+                })
+                .finally(() => {
+                    this._sessionCheckPromise = null;
+                });
+        }
+        return await this._sessionCheckPromise;
     }
 
     async backendRequest(url, options = {}) {
@@ -204,7 +217,9 @@ class GLPIClient {
                 window.dispatchEvent(new CustomEvent('glpi:session-expired'));
             }
             const message = data.error || data.message || `HTTP ${response.status}`;
-            throw new Error(message);
+            const error = new Error(message);
+            error.status = response.status;
+            throw error;
         }
         return data;
     }
@@ -299,6 +314,11 @@ class GLPIClient {
         });
     }
 
+    async getDocuments(itemtype, id) {
+        if (!this.backendMode) return null;
+        return await this.backendRequest(`/backend/documents/${encodeURIComponent(itemtype)}/${encodeURIComponent(id)}`);
+    }
+
     async getInventorySummary() {
         if (!this.backendMode) return null;
         return await this.backendRequest('/backend/inventory/summary');
@@ -318,9 +338,15 @@ class GLPIClient {
      * Get all items of a specific type
      */
     async getItems(itemtype, options = {}) {
-        const params = new URLSearchParams({
-            range: options.range || '0-1000',
-            ...options
+        const params = new URLSearchParams();
+        params.set('range', options.range || '0-1000');
+        Object.entries(options).forEach(([key, value]) => {
+            if (key === 'range' || value === undefined || value === null) return;
+            if (Array.isArray(value)) {
+                value.forEach(entry => params.append(`${key}[]`, entry));
+            } else {
+                params.set(key, value);
+            }
         });
         return await this.request(`/${itemtype}?${params}`);
     }
@@ -328,8 +354,17 @@ class GLPIClient {
     /**
      * Get a single item
      */
-    async getItem(itemtype, id) {
-        return await this.request(`/${itemtype}/${id}`);
+    async getItem(itemtype, id, options = {}) {
+        const params = new URLSearchParams();
+        Object.entries(options).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+                value.forEach(entry => params.append(`${key}[]`, entry));
+            } else {
+                params.set(key, value);
+            }
+        });
+        const query = params.toString();
+        return await this.request(`/${itemtype}/${id}${query ? `?${query}` : ''}`);
     }
 
     /**

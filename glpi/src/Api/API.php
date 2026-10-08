@@ -223,22 +223,36 @@ abstract class API
      */
     protected function cors()
     {
-        if (isset($_SERVER['HTTP_ORIGIN'])) {
+        if (!isset($_SERVER['HTTP_ORIGIN'])) {
+            return;
+        }
+
+        $origin = $_SERVER['HTTP_ORIGIN'];
+        $trusted = array_filter(array_map('trim', explode(',', (string) getenv('GLPI_TRUSTED_ORIGINS'))));
+
+        if ($trusted) {
+            if (!in_array($origin, $trusted, true)) {
+                http_response_code(403);
+                exit;
+            }
+            header("Access-Control-Allow-Origin: {$origin}");
+            header('Access-Control-Allow-Credentials: true');
+        } else {
             header("Access-Control-Allow-Origin: *");
         }
 
         if ($this->verb == 'GET' || $this->verb == 'OPTIONS') {
-            header("Access-Control-Expose-Headers: content-type, content-range, accept-range");
+            header('Access-Control-Expose-Headers: content-type, content-range, accept-range');
         }
 
         if ($this->verb == "OPTIONS") {
             if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD'])) {
-                header("Access-Control-Allow-Methods: PUT, GET, POST, DELETE, OPTIONS");
+                header('Access-Control-Allow-Methods: PUT, GET, POST, DELETE, OPTIONS');
             }
 
             if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS'])) {
-                header("Access-Control-Allow-Headers: " .
-                   "origin, content-type, accept, session-token, authorization, app-token");
+                header('Access-Control-Allow-Headers: ' .
+                   'origin, content-type, accept, session-token, authorization, app-token');
             }
             exit(0);
         }

@@ -8,9 +8,12 @@
         <button class="btn-secondary" onclick="loadSoftwareMatrix()">
             <i class="fas fa-sync-alt"></i> Refresh
         </button>
+        <button class="btn-secondary" onclick="exportSoftwareMatrix()">
+            <i class="fas fa-file-csv"></i> Export CSV
+        </button>
     </div>
 
-    <div class="inventory-page-kpi-grid software-kpi-grid">
+     <div class="inventory-page-kpi-grid software-kpi-grid">
         <article class="inventory-page-kpi">
             <span>Software Products</span>
             <strong id="softwareTotalCount">-</strong>
@@ -26,6 +29,10 @@
         <article class="inventory-page-kpi">
             <span>Computers</span>
             <strong id="softwareComputerCount">-</strong>
+        </article>
+        <article class="inventory-page-kpi">
+            <span>Licenses Tracked</span>
+            <strong id="softwareLicenseCount">-</strong>
         </article>
     </div>
 
@@ -50,11 +57,12 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Software</th>
-                    <th>Publisher</th>
-                    <th>Versions</th>
-                    <th>Computers</th>
-                    <th>Installations</th>
+                    <th onclick="toggleSort('softwareMatrix','name')"><a href="#">Software</a></th>
+                    <th onclick="toggleSort('softwareMatrix','publisher')"><a href="#">Publisher</a></th>
+                    <th onclick="toggleSort('softwareMatrix','versionCount')"><a href="#">Versions</a></th>
+                    <th onclick="toggleSort('softwareMatrix','computerCount')"><a href="#">Computers</a></th>
+                    <th onclick="toggleSort('softwareMatrix','installCount')"><a href="#">Installations</a></th>
+                    <th onclick="toggleSort('softwareMatrix','license')"><a href="#">License</a></th>
                     <th>Deployment details</th>
                 </tr>
             </thead>

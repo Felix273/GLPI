@@ -18,7 +18,7 @@ function initCharts() {
             data: {
                 labels: DASHBOARD_STATS.map(s => s.label),
                 datasets: [{
-                    data: DASHBOARD_STATS.map(s => state.dashboardTypeCounts[s.api] || 0),
+                    data: DASHBOARD_STATS.map(s => state.dashboardTypeCounts[s.id] || 0),
                     backgroundColor: DASHBOARD_STATS.map(s => DASHBOARD_UI[s.view]?.color || CHART_COLORS.primary),
                     borderColor: theme === 'dark' ? '#101b2d' : '#ffffff',
                     borderWidth: 3,

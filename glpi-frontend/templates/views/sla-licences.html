@@ -1,0 +1,96 @@
+<div id="licensesView" class="view sla-workspace">
+    <header class="view-header sla-page-header">
+        <div>
+            <span class="eyebrow">SERVICE &amp; SOFTWARE</span>
+            <h1>SLA &amp; Licenses</h1>
+            <p>Track agreement terms, license entitlements, ownership, and upcoming renewals.</p>
+        </div>
+        <div class="view-actions sla-page-actions">
+            <button class="btn-secondary" type="button" onclick="refreshAll()" title="Refresh records"><i class="fas fa-rotate"></i><span>Refresh</span></button>
+            <button class="btn-secondary" type="button" onclick="switchSlaLicenceMode('sla')"><i class="fas fa-file-signature"></i><span>New SLA</span></button>
+            <button class="btn-primary" type="button" onclick="switchSlaLicenceMode('license')"><i class="fas fa-plus"></i><span>New license</span></button>
+        </div>
+    </header>
+
+    <section class="sla-summary" aria-label="Agreement and license summary">
+        <div class="sla-summary-item">
+            <span class="sla-summary-icon"><i class="fas fa-layer-group"></i></span>
+            <span><small>Total records</small><strong id="slaSummaryTotal">—</strong></span>
+        </div>
+        <div class="sla-summary-item">
+            <span class="sla-summary-icon sla-summary-active"><i class="fas fa-circle-check"></i></span>
+            <span><small>Active</small><strong id="slaSummaryActive">—</strong></span>
+        </div>
+        <div class="sla-summary-item">
+            <span class="sla-summary-icon sla-summary-warning"><i class="fas fa-clock"></i></span>
+            <span><small>Expiring in 30 days</small><strong id="slaSummaryExpiring">—</strong></span>
+        </div>
+        <div class="sla-summary-item">
+            <span class="sla-summary-icon sla-summary-expired"><i class="fas fa-circle-exclamation"></i></span>
+            <span><small>Expired</small><strong id="slaSummaryExpired">—</strong></span>
+        </div>
+    </section>
+
+    <section id="slaUploadCard" class="sla-form-panel" aria-labelledby="slaFormTitle" hidden>
+        <div class="sla-form-heading">
+            <div><span class="eyebrow">AGREEMENT</span><h2 id="slaFormTitle">Add an SLA</h2></div>
+            <button class="btn-icon" type="button" onclick="switchSlaLicenceMode(null)" title="Close form"><i class="fas fa-xmark"></i></button>
+        </div>
+        <form id="slaUploadForm" onsubmit="submitSlaForm(event)">
+            <div class="sla-form-grid">
+                <div class="form-group"><label for="slaProductName">Agreement name *</label><input type="text" id="slaProductName" placeholder="e.g. Microsoft 365 support" required></div>
+                <div class="form-group"><label for="slaSupplier">Supplier *</label><div class="supplier-input-group"><select id="slaSupplier" data-searchable required><option value="">Loading suppliers…</option></select><input type="text" id="slaNewSupplier" class="supplier-new-input" placeholder="New supplier name" hidden><button type="button" class="btn-secondary btn-sm supplier-create-btn" id="slaSupplierCreateBtn" onclick="createSlaSupplier('sla')" hidden>Create supplier</button></div></div>
+                <div class="form-group"><label for="slaOwner">System owner *</label><select id="slaOwner" data-searchable required><option value="">Select a system owner…</option><option value="manual">+ Enter owner manually…</option></select><input type="text" id="slaOwnerManual" class="owner-manual-input" placeholder="Enter system owner or directorate" autocomplete="organization" hidden></div>
+                <div class="form-group"><label for="slaDateSigned">Date signed *</label><input type="date" id="slaDateSigned" required></div>
+                <div class="form-group"><label for="slaStartDate">Agreement starts *</label><input type="date" id="slaStartDate" required></div>
+                <div class="form-group"><label for="slaDuration">Term length *</label><div class="sla-input-unit"><input type="number" id="slaDuration" min="1" max="120" step="1" value="12" oninput="document.getElementById('slaNotice').max=this.value" required><span>months</span></div></div>
+                <div class="form-group"><label for="slaRenewal">Renewal</label><select id="slaRenewal"><option value="0">No automatic renewal</option><option value="1">Automatic (tacit)</option><option value="2">Explicit renewal</option></select></div>
+                <div class="form-group"><label for="slaNotice">Notice period</label><div class="sla-input-unit"><input type="number" id="slaNotice" min="0" max="120" step="1" value="0"><span>months</span></div></div>
+                <div class="form-group"><label for="slaDocument">Agreement document</label><input type="file" id="slaDocument" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"></div>
+            </div>
+            <div class="sla-form-actions"><button type="button" class="btn-secondary" onclick="switchSlaLicenceMode(null)">Cancel</button><button type="submit" class="btn-primary" id="slaSubmitBtn"><i class="fas fa-floppy-disk"></i> Save SLA</button></div>
+        </form>
+    </section>
+
+    <section id="licenseUploadCard" class="sla-form-panel" aria-labelledby="licenseFormTitle" hidden>
+        <div class="sla-form-heading">
+            <div><span class="eyebrow">SOFTWARE ENTITLEMENT</span><h2 id="licenseFormTitle">Add a software license</h2></div>
+            <button class="btn-icon" type="button" onclick="switchSlaLicenceMode(null)" title="Close form"><i class="fas fa-xmark"></i></button>
+        </div>
+        <form id="licenseUploadForm" onsubmit="submitLicenseForm(event)">
+            <div class="sla-form-grid">
+                <div class="form-group"><label for="licenseProductName">License name *</label><input type="text" id="licenseProductName" placeholder="e.g. Adobe Creative Cloud" required></div>
+                <div class="form-group"><label for="licenseSoftware">GLPI software *</label><select id="licenseSoftware" data-searchable required><option value="">Loading software…</option></select><small>Select the software record this entitlement covers. Create it in Software first if it is not listed.</small></div>
+                <div class="form-group"><label for="licenseSupplier">Supplier *</label><div class="supplier-input-group"><select id="licenseSupplier" data-searchable required><option value="">Loading suppliers…</option></select><input type="text" id="licenseNewSupplier" class="supplier-new-input" placeholder="New supplier name" hidden><button type="button" class="btn-secondary btn-sm supplier-create-btn" id="licenseSupplierCreateBtn" onclick="createSlaSupplier('license')" hidden>Create supplier</button></div></div>
+                <div class="form-group"><label for="licenseOwner">System owner *</label><select id="licenseOwner" data-searchable required><option value="">Select a system owner…</option><option value="manual">+ Enter owner manually…</option></select><input type="text" id="licenseOwnerManual" class="owner-manual-input" placeholder="Enter system owner or directorate" autocomplete="organization" hidden></div>
+                <div class="form-group"><label for="licenseNumber">Number of licenses *</label><input type="number" id="licenseNumber" min="-1" step="1" value="1" required><small>Enter -1 for an unlimited entitlement.</small></div>
+                <div class="form-group"><label for="licenseStartDate">Valid from</label><input type="date" id="licenseStartDate"><small>Stored with the workspace record.</small></div>
+                <div class="form-group"><label for="licenseEndDate">Expires on</label><input type="date" id="licenseEndDate"><small>Leave blank for a license that does not expire.</small></div>
+                <div class="form-group"><label for="licenseSerial">Serial number</label><input type="text" id="licenseSerial" autocomplete="off"></div>
+                <div class="form-group"><label for="licenseDocument">License document</label><input type="file" id="licenseDocument" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"></div>
+            </div>
+            <div class="sla-form-actions"><button type="button" class="btn-secondary" onclick="switchSlaLicenceMode(null)">Cancel</button><button type="submit" class="btn-primary" id="licenseSubmitBtn"><i class="fas fa-floppy-disk"></i> Save license</button></div>
+        </form>
+    </section>
+
+    <section class="sla-records-section" aria-labelledby="slaRecordsTitle">
+        <div class="sla-records-heading"><div><h2 id="slaRecordsTitle">Agreements &amp; licenses</h2><p>One register for service commitments and software entitlements.</p></div><span class="records-count" id="slaLicencesCount">Loading records…</span></div>
+        <div class="sla-record-toolbar">
+            <div class="sla-type-tabs" role="group" aria-label="Filter records by type">
+                <button type="button" class="sla-type-tab active" data-record-type="all" aria-pressed="true" onclick="setSlaLicenceTypeFilter('all')">All <span id="slaTypeCountAll">0</span></button>
+                <button type="button" class="sla-type-tab" data-record-type="sla" aria-pressed="false" onclick="setSlaLicenceTypeFilter('sla')">SLAs <span id="slaTypeCountSla">0</span></button>
+                <button type="button" class="sla-type-tab" data-record-type="license" aria-pressed="false" onclick="setSlaLicenceTypeFilter('license')">Licenses <span id="slaTypeCountLicense">0</span></button>
+            </div>
+            <div class="sla-record-filters">
+                <label class="sla-search"><i class="fas fa-search" aria-hidden="true"></i><input id="slaLicenceSearch" type="search" placeholder="Search name, supplier, owner…" aria-label="Search agreements and licenses" oninput="filterSlaLicenceRecords()"></label>
+                <select id="slaStatusFilter" aria-label="Filter by status" onchange="filterSlaLicenceRecords()"><option value="all">All statuses</option><option value="active">Active</option><option value="upcoming">Upcoming</option><option value="expiring">Expiring soon</option><option value="expired">Expired</option><option value="undated">No term dates</option></select>
+            </div>
+        </div>
+        <div class="table-container sla-table-container">
+            <table class="data-table sla-record-table">
+                <thead><tr><th>Type</th><th>Agreement / license</th><th>Supplier</th><th>System owner</th><th>Term</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr></thead>
+                <tbody id="slaLicenceRecordsBody"><tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+            </table>
+        </div>
+    </section>
+</div>

@@ -1349,6 +1349,23 @@ body {
     color: var(--text-secondary);
 }
 
+.alert-dismiss {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1;
+    transition: color 0.2s, background 0.2s;
+}
+
+.alert-dismiss:hover {
+    color: var(--danger);
+    background: rgba(239, 68, 68, 0.1);
+}
+
 .notification-empty {
     padding: 48px;
     text-align: center;
@@ -1495,6 +1512,24 @@ body {
 .alert-item .alert-time {
     font-size: 12px;
     color: var(--text-secondary);
+}
+
+.alert-dismiss {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 1;
+    transition: color 0.2s, background 0.2s;
+    flex-shrink: 0;
+}
+
+.alert-dismiss:hover {
+    color: var(--danger);
+    background: rgba(239, 68, 68, 0.1);
 }
 
 /* ========================================

@@ -77,8 +77,10 @@ const state = {
 
 const ASSET_TYPES = {
   computers: { name: "Computer", api: "Computer", label: "Computers" },
+    laptops: { name: "Laptop", api: "Computer", label: "Laptops", category: "Laptop" },
   monitors: { name: "Monitor", api: "Monitor", label: "Monitors" },
-  peripherals: { name: "Peripheral", api: "Peripheral", label: "Peripherals" },
+  peripherals: { name: "Peripheral", api: "Peripheral", label: "Peripherals", category: "Peripherals" },
+  ups: { name: "UPS", api: "Peripheral", label: "UPS", category: "UPS" },
   phones: { name: "Phone", api: "Phone", label: "Phones" },
   printers: { name: "Printer", api: "Printer", label: "Printers" },
   cartridges: {
@@ -101,11 +103,6 @@ const ASSET_TYPES = {
   racks: { name: "Rack", api: "Rack", label: "Racks" },
   datacenters: { name: "Datacenter", api: "Datacenter", label: "Datacenters" },
   software: { name: "Software", api: "Software", label: "Software" },
-  licenses: {
-    name: "Software License",
-    api: "SoftwareLicense",
-    label: "Licenses",
-  },
   certificates: {
     name: "Certificate",
     api: "Certificate",
@@ -124,9 +121,11 @@ const DASHBOARD_STATS = [
   {
     view: "computers",
     api: "Computer",
-    id: "computerCount",
-    label: "Computers",
+    id: "cpuCount",
+    label: "CPU",
+    category: "CPU",
   },
+  { view: "laptops", api: "Computer", id: "laptopCount", label: "Laptops", category: "Laptops" },
   { view: "monitors", api: "Monitor", id: "monitorCount", label: "Monitors" },
   { view: "printers", api: "Printer", id: "printerCount", label: "Printers" },
   {
@@ -136,6 +135,8 @@ const DASHBOARD_STATS = [
     label: "Network",
   },
   { view: "phones", api: "Phone", id: "phoneCount", label: "Phones" },
+  { view: "peripherals", api: "Peripheral", id: "peripheralCount", label: "Peripherals", category: "Peripherals" },
+  { view: "ups", api: "Peripheral", id: "upsCount", label: "UPS", category: "UPS" },
   { view: "racks", api: "Rack", id: "rackCount", label: "Racks" },
   {
     view: "cartridges",
@@ -153,12 +154,12 @@ const DASHBOARD_STATS = [
 
 const DASHBOARD_SOFTWARE_STATS = [
   { view: "software", api: "Software", id: "softwareCount", label: "Software" },
-  {
-    view: "licenses",
-    api: "SoftwareLicense",
-    id: "licenseCount",
-    label: "Licenses",
-  },
+   {
+     view: "licenses",
+     api: "SoftwareLicense",
+     id: "licenseCount",
+     label: "SLA & Licenses",
+   },
 ];
 
 const DASHBOARD_KPIS = [
@@ -238,6 +239,21 @@ const DASHBOARD_UI = {
     icon: "fa-laptop",
     color: "#2563eb",
     tint: "rgba(37, 99, 235, .12)",
+  },
+  laptops: {
+    icon: "fa-laptop",
+    color: "#0f766e",
+    tint: "rgba(15, 118, 110, .12)",
+  },
+  peripherals: {
+    icon: "fa-keyboard",
+    color: "#c2410c",
+    tint: "rgba(194, 65, 12, .12)",
+  },
+  ups: {
+    icon: "fa-car-battery",
+    color: "#7c3aed",
+    tint: "rgba(124, 58, 237, .12)",
   },
   monitors: {
     icon: "fa-display",

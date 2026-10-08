@@ -20,6 +20,7 @@ session_start();
 const DATA_DIR = __DIR__ . '/data';
 const META_DIR = DATA_DIR . '/metadata';
 const DOC_DIR = DATA_DIR . '/documents';
+const MAX_DOCUMENT_BYTES = 5 * 1024 * 1024;
 const DEFAULT_SETTINGS_FILE = DATA_DIR . '/settings.json';
 const DEFAULT_LOGO_DIR = DATA_DIR . '/branding';
 
@@ -56,7 +57,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 if (str_starts_with($path, 'backend/')) {
     $clientIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
     $route = substr($path, 8);
-    if (!rateLimit("{$clientIp}:{$route}", 100, 60)) {
+    if (!configuredRateLimit("{$clientIp}:{$route}")) {
         jsonResponse(['error' => 'Rate limit exceeded. Try again later.'], 429);
         exit;
     }
@@ -108,8 +109,18 @@ function handleBackend(string $route, string $method): void
         } else {
             jsonResponse(['error' => 'Unknown backend route'], 404);
         }
+    } catch (GlpiApiException $error) {
+        jsonResponse(['error' => $error->getMessage()], $error->httpStatus);
     } catch (Throwable $error) {
         jsonResponse(['error' => $error->getMessage()], 500);
+    }
+}
+
+class GlpiApiException extends RuntimeException
+{
+    public function __construct(string $message, public readonly int $httpStatus)
+    {
+        parent::__construct($message);
     }
 }
 
@@ -879,38 +890,6 @@ function requireAdminGlpiSession(): array
     return $glpi;
 }
 
-function sessionHasAdministrativeProfile(mixed $value): bool
-{
-    if (is_string($value)) {
-        return (bool)preg_match('/super[- ]?admin|administrator|\badmin\b/i', $value);
-    }
-
-    if (!is_array($value)) {
-        return false;
-    }
-
-    foreach ($value as $key => $item) {
-        $normalized = strtolower((string)$key);
-
-        if ($normalized === 'config' && is_numeric($item) && (int)$item > 0) {
-            return true;
-        }
-
-        if (
-            in_array($normalized, ['glpiactiveprofile', 'active_profile', 'profile', 'profiles_name'], true)
-            && sessionHasAdministrativeProfile($item)
-        ) {
-            return true;
-        }
-
-        if (is_array($item) && sessionHasAdministrativeProfile($item)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 function currentGlpiUserLabel(array $glpi): string
 {
     $info = $glpi['session_info'] ?? [];
@@ -949,6 +928,9 @@ function handleMetadataCollection(): void
         }
         $itemtype = substr($name, 0, $position);
         $id = substr($name, $position + 1);
+        if (!glpiItemIsReadable($itemtype, $id)) {
+            continue;
+        }
         $metadata = readJsonFile($file, []);
         if (isset($metadata['documents']) && is_array($metadata['documents'])) {
             $metadata['documents'] = array_map(function (array $document): array {
@@ -963,7 +945,12 @@ function handleMetadataCollection(): void
 
 function handleMetadata(string $target, string $method): void
 {
+    requireGlpiSession();
     [$itemtype, $id] = parseTarget($target);
+    requireReadableGlpiItem($itemtype, $id);
+    if (in_array($method, ['PUT', 'POST'], true)) {
+        requireAdminGlpiSession();
+    }
     $file = metadataFile($itemtype, $id);
 
     if ($method === 'GET') {
@@ -982,7 +969,12 @@ function handleMetadata(string $target, string $method): void
 
 function handleDocuments(string $target, string $method): void
 {
+    requireGlpiSession();
     [$itemtype, $id] = parseTarget($target);
+    requireReadableGlpiItem($itemtype, $id);
+    if (in_array($method, ['POST', 'DELETE'], true)) {
+        requireAdminGlpiSession();
+    }
     $metaFile = metadataFile($itemtype, $id);
     $meta = readJsonFile($metaFile, ['documents' => []]);
 
@@ -998,9 +990,15 @@ function handleDocuments(string $target, string $method): void
         }
 
         [$prefix, $encoded] = explode(',', $dataUrl, 2);
+        if (strlen($encoded) > (int)ceil(MAX_DOCUMENT_BYTES * 4 / 3)) {
+            jsonResponse(['error' => 'Document exceeds the 5 MiB limit'], 413);
+        }
         $binary = base64_decode($encoded, true);
         if ($binary === false) {
             jsonResponse(['error' => 'Invalid document data'], 422);
+        }
+        if (strlen($binary) > MAX_DOCUMENT_BYTES) {
+            jsonResponse(['error' => 'Document exceeds the 5 MiB limit'], 413);
         }
 
         $docId = (string)round(microtime(true) * 1000) . '-' . bin2hex(random_bytes(4));
@@ -1755,7 +1753,7 @@ function glpiHttp(string $baseUrl, string $path, string $method, ?array $payload
     $decoded = json_decode($raw, true);
     if ($status >= 400) {
         $message = is_array($decoded) ? ($decoded[1] ?? $decoded['error'] ?? $raw) : $raw;
-        jsonResponse(['error' => $message, 'status' => $status], $status);
+        throw new GlpiApiException((string)$message, $status);
     }
 
     return is_array($decoded) ? $decoded : ['raw' => $raw];
@@ -1897,6 +1895,36 @@ function requireGlpiSession(): array
     return $_SESSION['glpi'];
 }
 
+function glpiItemIsReadable(string $itemtype, string $id): bool
+{
+    $glpi = requireGlpiSession();
+
+    try {
+        glpiHttp(
+            $glpi['url'],
+            '/' . rawurlencode($itemtype) . '/' . rawurlencode($id),
+            'GET',
+            null,
+            $glpi['user_token'],
+            $glpi['session_token'],
+            $glpi['app_token']
+        );
+        return true;
+    } catch (GlpiApiException $error) {
+        if (in_array($error->httpStatus, [400, 403, 404], true)) {
+            return false;
+        }
+        throw $error;
+    }
+}
+
+function requireReadableGlpiItem(string $itemtype, string $id): void
+{
+    if (!glpiItemIsReadable($itemtype, $id)) {
+        jsonResponse(['error' => 'Asset is unavailable or access is denied'], 403);
+    }
+}
+
 function parseTarget(string $target): array
 {
     $parts = explode('/', trim($target, '/'));
@@ -2015,6 +2043,7 @@ function serveStatic(string $path): void
         'html' => 'text/html; charset=UTF-8',
         'css' => 'text/css; charset=UTF-8',
         'js' => 'application/javascript; charset=UTF-8',
+        'cjs' => 'application/javascript; charset=UTF-8',
         'json' => 'application/json; charset=UTF-8',
         'png' => 'image/png',
         'jpg' => 'image/jpeg',
