@@ -1,0 +1,58 @@
+<!-- Dashboard -->
+                <div id="dashboardView" class="view active">
+                    <div class="view-header dashboard-heading">
+                        <div><span class="eyebrow">Asset intelligence</span><h1>Operations overview</h1><p>Monitor inventory, asset health and recent activity from one workspace.</p></div>
+                        <div class="view-actions dashboard-actions"><button class="btn-secondary" id="dashboardCustomizeButton" onclick="toggleDashboardEditMode()"><i class="fas fa-sliders"></i> Customize</button><button class="btn-secondary" onclick="refreshDashboard()"><i class="fas fa-rotate"></i> Refresh</button><button class="btn-primary" onclick="showCreateModal('Computer')"><i class="fas fa-plus"></i> Add asset</button></div>
+                    </div>
+
+                    <div class="dashboard-edit-toolbar" id="dashboardEditToolbar" hidden>
+                        <div><strong>Customize dashboard</strong><span>Drag sections to reorder them or hide what you do not need.</span></div>
+                        <div class="dashboard-edit-actions"><button class="btn-secondary btn-sm" onclick="openDashboardWidgetMenu()"><i class="fas fa-plus"></i> Add widget</button><button class="text-button" onclick="resetDashboardLayout()">Reset layout</button><button class="btn-primary btn-sm" onclick="toggleDashboardEditMode()"><i class="fas fa-check"></i> Done</button></div>
+                    </div>
+                    <div class="dashboard-widget-menu" id="dashboardWidgetMenu" hidden></div>
+
+                    <div class="dashboard-canvas" id="dashboardCanvas">
+                    <section class="dashboard-widget" data-dashboard-widget="asset-stats" data-widget-label="Asset totals"><div class="widget-controls"><button type="button" class="widget-drag-handle" title="Drag to reorder"><i class="fas fa-grip-vertical"></i></button><button type="button" class="widget-hide-button" onclick="toggleDashboardWidget('asset-stats')" title="Hide widget"><i class="fas fa-eye-slash"></i></button></div><div class="stats-grid" id="statsGrid"></div></section>
+
+                    <section class="dashboard-widget" data-dashboard-widget="charts" data-widget-label="Charts"><div class="widget-controls"><button type="button" class="widget-drag-handle" title="Drag to reorder"><i class="fas fa-grip-vertical"></i></button><button type="button" class="widget-hide-button" onclick="toggleDashboardWidget('charts')" title="Hide widget"><i class="fas fa-eye-slash"></i></button></div><div class="charts-section">
+                        <div class="chart-card"><div class="card-heading"><div><span class="eyebrow">Distribution</span><h3>Assets by type</h3></div><span class="card-meta">Live inventory</span></div><div class="chart-wrap"><canvas id="assetTypeChart"></canvas></div></div>
+                        <div class="chart-card"><div class="card-heading"><div><span class="eyebrow">Condition</span><h3>Assets by status</h3></div><span class="card-meta">Current state</span></div><div class="chart-wrap"><canvas id="assetStatusChart"></canvas></div></div>
+                    </div></section>
+
+                    <section class="dashboard-widget" data-dashboard-widget="software" data-widget-label="Software inventory"><div class="widget-controls"><button type="button" class="widget-drag-handle" title="Drag to reorder"><i class="fas fa-grip-vertical"></i></button><button type="button" class="widget-hide-button" onclick="toggleDashboardWidget('software')" title="Hide widget"><i class="fas fa-eye-slash"></i></button></div><div class="dashboard-section software-section">
+                        <div class="section-heading">
+                            <div><span class="eyebrow">Software</span><h2>Software inventory</h2></div>
+                            <button class="text-button" onclick="navigateTo('softwareMatrix')">View software matrix <i class="fas fa-arrow-right"></i></button>
+                        </div>
+                        <div id="softwareStatsGrid" class="stats-grid compact"></div>
+                        <div id="softwareActivity" class="software-activity">
+                            <table class="data-table">
+                                <thead><tr><th>Software</th><th>Installs</th><th>Computers</th><th>Versions</th></tr></thead>
+                                <tbody id="softwareList"><tr><td colspan="4"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+                            </table>
+                        </div>
+                    </div></section>
+
+                    <section class="dashboard-widget" data-dashboard-widget="quick-actions" data-widget-label="Quick actions"><div class="widget-controls"><button type="button" class="widget-drag-handle" title="Drag to reorder"><i class="fas fa-grip-vertical"></i></button><button type="button" class="widget-hide-button" onclick="toggleDashboardWidget('quick-actions')" title="Hide widget"><i class="fas fa-eye-slash"></i></button></div><div class="dashboard-section quick-actions-section">
+                        <div class="section-heading"><div><span class="eyebrow">Shortcuts</span><h2>Quick actions</h2></div></div>
+                        <div class="quick-actions">
+                            <button class="action-card" onclick="showCreateModal('Computer')"><span class="action-icon"><i class="fas fa-plus"></i></span><span class="action-copy"><strong>Add asset</strong><small>Register equipment in GLPI</small></span><i class="fas fa-arrow-right action-arrow"></i></button>
+                            <button class="action-card" onclick="showQuickAssignModal()"><span class="action-icon"><i class="fas fa-user-check"></i></span><span class="action-copy"><strong>Assign equipment</strong><small>Allocate an available asset</small></span><i class="fas fa-arrow-right action-arrow"></i></button>
+                            <button class="action-card" onclick="navigateTo('import')"><span class="action-icon"><i class="fas fa-file-arrow-up"></i></span><span class="action-copy"><strong>Import CSV</strong><small>Bulk upload asset records</small></span><i class="fas fa-arrow-right action-arrow"></i></button>
+                            <button class="action-card" onclick="exportAllAssets()"><span class="action-icon"><i class="fas fa-file-export"></i></span><span class="action-copy"><strong>Export inventory</strong><small>Download all asset data</small></span><i class="fas fa-arrow-right action-arrow"></i></button>
+                        </div>
+                    </div></section>
+
+                    <section class="dashboard-widget" data-dashboard-widget="recent-activity" data-widget-label="Recent activity"><div class="widget-controls"><button type="button" class="widget-drag-handle" title="Drag to reorder"><i class="fas fa-grip-vertical"></i></button><button type="button" class="widget-hide-button" onclick="toggleDashboardWidget('recent-activity')" title="Hide widget"><i class="fas fa-eye-slash"></i></button></div><div class="dashboard-section recent-assets-section">
+                        <div class="section-heading"><div><span class="eyebrow">Latest activity</span><h2>Recent activity</h2></div><button class="text-button" onclick="navigateTo('computers')">View inventory <i class="fas fa-arrow-right"></i></button></div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead><tr><th>Activity</th><th>Asset</th><th>Type</th><th>Status</th><th>When</th></tr></thead>
+                                <tbody id="recentAssetsTable"><tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+                            </table>
+                        </div>
+                    </div></section>
+                    <section class="dashboard-widget optional-dashboard-widget" data-dashboard-widget="warranty-watch" data-widget-label="Warranty watch" hidden><div class="widget-controls"><button type="button" class="widget-drag-handle" title="Drag to reorder"><i class="fas fa-grip-vertical"></i></button><button type="button" class="widget-configure-button" onclick="configureDashboardWidget('warranty-watch')" title="Configure widget"><i class="fas fa-gear"></i></button><button type="button" class="widget-hide-button" onclick="toggleDashboardWidget('warranty-watch')" title="Hide widget"><i class="fas fa-eye-slash"></i></button></div><div class="dashboard-section"><div class="section-heading"><div><span class="eyebrow">Lifecycle</span><h2>Warranty watch</h2></div><span class="card-meta">Needs attention</span></div><div class="dashboard-insight-card"><i class="fas fa-shield-halved"></i><div><strong id="dashboardWarrantyCount">0 assets</strong><p>Assets with warranties expiring soon or already expired.</p></div><button class="text-button" onclick="navigateTo('inventoryHealth')">Review <i class="fas fa-arrow-right"></i></button></div></div></section>
+                    <section class="dashboard-widget optional-dashboard-widget" data-dashboard-widget="team-notes" data-widget-label="Team notes" hidden><div class="widget-controls"><button type="button" class="widget-drag-handle" title="Drag to reorder"><i class="fas fa-grip-vertical"></i></button><button type="button" class="widget-configure-button" onclick="configureDashboardWidget('team-notes')" title="Configure widget"><i class="fas fa-gear"></i></button><button type="button" class="widget-hide-button" onclick="toggleDashboardWidget('team-notes')" title="Hide widget"><i class="fas fa-eye-slash"></i></button></div><div class="dashboard-section"><div class="section-heading"><div><span class="eyebrow">Workspace</span><h2>Team notes</h2></div><span class="card-meta">Saved locally</span></div><textarea class="dashboard-notes" id="dashboardNotes" placeholder="Add a note for your dashboard..."></textarea></div></section>
+                    </div>
+                </div>

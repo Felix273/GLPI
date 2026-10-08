@@ -1,0 +1,54 @@
+<!-- Main App -->
+    <div id="app" class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar-overlay" onclick="toggleMobileMenu()"></div>
+
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="5"></rect>
+                        <path d="M7.5 8.5h9M7.5 12h6M7.5 15.5h4"></path>
+                    </svg>
+                </div>
+                <div class="brand-copy"><span class="brand">GLPI Asset Hub</span><small>IT operations</small></div>
+            </div>
+            <div class="workspace-chip"><span class="workspace-dot"></span><div><strong>Primary workspace</strong><small>Connected inventory</small></div><i class="fas fa-chevron-down"></i></div>
+            <nav class="sidebar-nav" id="sidebarNav">
+                <!-- Sidebar navigation is rendered dynamically from settings -->
+            </nav>
+            <div class="sidebar-footer">
+                <a href="#" class="nav-item settings-nav-item" data-view="settings">
+                    <i class="fas fa-gear"></i> Settings
+                </a>
+                <button id="themeToggle" class="btn-theme"><i class="fas fa-moon"></i><span>Dark Mode</span></button>
+                <button id="logoutBtn" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="topbar-leading">
+                    <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Open navigation"><i class="fas fa-bars"></i></button>
+                    <div class="page-context"><span id="pageEyebrow">Overview</span><strong id="pageTitle">Dashboard</strong></div>
+                </div>
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search assets, users or locations" id="globalSearch" aria-label="Search assets">
+                    <kbd>⌘ K</kbd>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-icon topbar-action" onclick="refreshAll()" aria-label="Refresh current view" title="Refresh"><i class="fas fa-rotate"></i></button>
+                    <div class="notification-wrap">
+                        <button class="notification-bell" onclick="toggleNotifications()" aria-label="Open notifications"><i class="fas fa-bell"></i><span class="notification-badge" id="notificationCount">0</span></button>
+                        <div class="notifications-panel" id="notificationsPanel">
+                            <div class="notifications-header"><div><span class="eyebrow">Activity</span><h3>Notifications</h3></div><button onclick="clearAllNotifications()">Clear all</button></div>
+                            <div class="notifications-list" id="notificationsList"><div class="notification-empty">No notifications</div></div>
+                        </div>
+                    </div>
+                    <div class="user-menu"><div class="user-avatar" id="userAvatar">AM</div><div class="user-info"><span id="userDisplay">Asset Manager</span><small>Administrator</small></div><i class="fas fa-chevron-down"></i></div>
+                </div>
+            </header>
+
+            <div id="contentArea" class="content">

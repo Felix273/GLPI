@@ -72,7 +72,7 @@ if (isset($_POST['is_private'])) {
             echo "</td><td>" . __('Child entities') . "</td><td>";
             Dropdown::showYesNo('is_recursive', $_POST["is_recursive"]);
             echo "</td><td>";
-            echo "<a href='#' onClick='setPrivate" . $_POST['rand'] . "();return false'>" . __('Set personal') . "</a>";
+            echo "<a href='#' onClick='setPrivate" . htmlspecialchars($_POST['rand'], ENT_QUOTES | ENT_HTML5, "UTF-8") . "();return false'>" . __('Set personal') . "</a>";
             echo "</td></tr></table>";
             break;
     }

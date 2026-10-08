@@ -1,0 +1,111 @@
+<!-- User Asset Relationships View -->
+                <div id="usersView" class="view">
+                    <div class="view-header">
+                        <div>
+                            <span class="eyebrow">People and equipment</span>
+                            <h1>User asset associations</h1>
+                            <p>See every user and the equipment currently associated with their account.</p>
+                        </div>
+
+                        <div class="view-actions">
+                            <button class="btn-secondary" onclick="loadUsers()">
+                                <i class="fas fa-rotate"></i> Refresh
+                            </button>
+
+                            <button class="btn-primary" onclick="showCreateUserModal()">
+                                <i class="fas fa-user-plus"></i> Manage users
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="report-cards user-association-stats">
+                        <div class="report-card">
+                            <span class="eyebrow">Directory</span>
+                            <h3>Total users</h3>
+                            <div class="report-value" id="userCountTotal">-</div>
+                        </div>
+
+                        <div class="report-card">
+                            <span class="eyebrow">In use</span>
+                            <h3>Users with assets</h3>
+                            <div class="report-value" id="userCountAssigned">-</div>
+                        </div>
+
+                        <div class="report-card">
+                            <span class="eyebrow">Equipment</span>
+                            <h3>Assigned assets</h3>
+                            <div class="report-value" id="userAssetCount">-</div>
+                        </div>
+
+                        <div class="report-card">
+                            <span class="eyebrow">Needs attention</span>
+                            <h3>Unlinked associations</h3>
+                            <div class="report-value" id="unlinkedAssociationCount">-</div>
+                        </div>
+                    </div>
+
+                    <div class="filters-bar user-relationship-filters">
+                        <div class="search-field">
+                            <i class="fas fa-search"></i>
+                            <input
+                                type="text"
+                                id="userSearch"
+                                placeholder="Search users, email or profile..."
+                                oninput="filterUsers()"
+                            >
+                        </div>
+
+                        <select id="userAssignmentFilter" onchange="filterUsers()">
+                            <option value="">All users</option>
+                            <option value="assigned">Users with assets</option>
+                            <option value="unassigned">Users without assets</option>
+                        </select>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table user-relationship-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Profile</th>
+                                    <th>Account status</th>
+                                    <th>Assigned assets</th>
+                                    <th>Asset types</th>
+                                    <th>Locations</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="usersTableBody">
+                                <tr>
+                                    <td colspan="7">
+                                        <div class="loading">
+                                            <div class="spinner"></div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div
+                        id="unlinkedAssociationsSection"
+                        class="dashboard-section unlinked-associations-section"
+                        style="display:none"
+                    >
+                        <div class="section-heading">
+                            <div>
+                                <span class="eyebrow">Imported records</span>
+                                <h2>Unlinked staff or office associations</h2>
+                                <p>
+                                    These imported labels do not yet match a GLPI user account.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div
+                            id="unlinkedAssociationsList"
+                            class="unlinked-associations-list"
+                        ></div>
+                    </div>
+                </div>

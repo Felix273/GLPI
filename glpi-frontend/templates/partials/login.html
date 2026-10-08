@@ -1,0 +1,51 @@
+<!-- Login Modal -->
+    <div id="loginModal" class="modal auth-modal" aria-labelledby="loginTitle">
+        <div class="modal-content auth-card">
+            <section class="auth-showcase" aria-hidden="true">
+                <div class="auth-brand-mark">
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="5"></rect>
+                        <path d="M7.5 8.5h9M7.5 12h6M7.5 15.5h4"></path>
+                    </svg>
+                </div>
+                <div>
+                    <span class="auth-kicker">GLPI ASSET HUB</span>
+                    <h1>Every asset.<br>One clear view.</h1>
+                    <p>Track inventory, ownership, health and lifecycle information through a focused operations workspace.</p>
+                </div>
+                <div class="auth-feature-list">
+                    <div><i class="fas fa-chart-line"></i><span>Real-time operational overview</span></div>
+                    <div><i class="fas fa-shield-halved"></i><span>Secure GLPI API connection</span></div>
+                    <div><i class="fas fa-layer-group"></i><span>Centralized asset lifecycle data</span></div>
+                </div>
+            </section>
+            <section class="auth-form-panel">
+                <div class="login-header">
+                    <div class="auth-mobile-brand">
+                        <div class="logo"><i class="fas fa-cubes-stacked"></i></div>
+                        <span>GLPI Asset Hub</span>
+                    </div>
+                    <span class="eyebrow">Welcome back</span>
+                    <h2 id="loginTitle">Connect your workspace</h2>
+                    <p>Use your GLPI API details to access the asset dashboard.</p>
+                </div>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="glpiUrl">GLPI URL</label>
+                        <div class="input-shell"><i class="fas fa-link"></i><input type="url" id="glpiUrl" value="http://localhost:8095" required></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="userToken">User token</label>
+                        <div class="input-shell"><i class="fas fa-key"></i><input type="password" id="userToken" required autocomplete="current-password"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="appToken">App token <span class="optional-label">Optional</span></label>
+                        <div class="input-shell"><i class="fas fa-fingerprint"></i><input type="password" id="appToken"></div>
+                    </div>
+                    <button type="submit" id="loginSubmit" class="btn-primary auth-submit"><span>Connect securely</span><i class="fas fa-arrow-right"></i></button>
+                </form>
+                <div id="loginError" class="error-message"></div>
+                <p class="auth-help"><i class="fas fa-circle-info"></i> API access must be enabled in GLPI Setup.</p>
+            </section>
+        </div>
+    </div>

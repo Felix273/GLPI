@@ -36,13 +36,7 @@ A simplified, modern frontend for GLPI that connects via the REST API.
 
 ### Step 3: Run the Frontend
 
-#### Option A: Direct Browser
-Open `index.html` directly in your browser:
-```
-file:///path/to/glpi-frontend/index.html
-```
-
-#### Option B: PHP Server (Recommended)
+#### PHP Server
 Start the built-in PHP server:
 
 ```bash
@@ -52,7 +46,7 @@ php -S localhost:8080 server.php
 
 Then open `http://localhost:8080` in your browser.
 
-The PHP server is now the preferred mode. It provides:
+The PHP server provides:
 
 - `/backend/session` for GLPI login/session handling
 - `/backend/glpi/...` as the GLPI API proxy
@@ -89,15 +83,16 @@ http://your-glpi-server/front/inventory.php
 
 ```
 glpi-frontend/
-├── index.html          # Main HTML
 ├── server.php          # PHP server/backend proxy
+├── main.js             # Vite development/build entry point
 ├── data/               # Shared metadata/document storage
+├── templates/           # PHP-rendered HTML shell and views
 ├── assets/
-│   ├── css/
-│   │   └── style.css   # Styling
-│   └── js/
-│       ├── api.js      # GLPI API client
-│       └── app.js     # Application logic
+│   ├── css/            # Core and feature styles
+│   └── js/             # API, core, and feature modules
+├── tests/              # Vitest, PHPUnit, and authenticated E2E tests
+├── package.json        # Node scripts and dependencies
+├── composer.json       # PHPUnit dependencies
 └── README.md
 ```
 
@@ -115,14 +110,7 @@ glpi-frontend/
 
 ## Extending
 
-To add more asset types, edit `ASSET_TYPES` in `assets/js/app.js`:
-
-```javascript
-const ASSET_TYPES = {
-    phones: { name: 'Phone', icon: 'phones', searchField: 1 },
-    // Add more...
-};
-```
+To add more asset types, follow the existing asset configuration in the feature modules under `assets/js/features/` and update the matching navigation/template entries. Run `npm run lint` and `npm run build` after frontend changes.
 
 ## Troubleshooting
 

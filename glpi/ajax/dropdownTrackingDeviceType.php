@@ -106,7 +106,7 @@ if ($isValidItemtype) {
     );
 
     // Auto update summary of active or just solved tickets
-    echo "<span id='item_ticket_selection_information{$_POST['myname']}_$rand' class='ms-1'></span>";
+    echo "<span id='item_ticket_selection_information" . htmlspecialchars($_POST['myname'], ENT_QUOTES | ENT_HTML5, 'UTF-8') . "_$rand' class='ms-1'></span>";
     Ajax::updateItemOnSelectEvent(
         $field_id,
         "item_ticket_selection_information{$_POST['myname']}_$rand",

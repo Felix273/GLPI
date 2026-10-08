@@ -1,0 +1,44 @@
+/* Reports and audit asset register */
+.report-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: var(--shadow-xs);
+}
+
+.report-filters {
+    display: grid;
+    grid-template-columns: minmax(240px, 2fr) repeat(3, minmax(150px, 1fr));
+    gap: 12px;
+    margin: 18px 0;
+}
+
+.report-filters .form-control {
+    width: 100%;
+    min-width: 0;
+}
+
+#reportsView .table-container {
+    margin-top: 4px;
+}
+
+#reportsView .report-value {
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 1100px) {
+    .report-filters {
+        grid-template-columns: repeat(2, minmax(180px, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .report-panel {
+        padding: 14px;
+    }
+
+    .report-filters {
+        grid-template-columns: 1fr;
+    }
+}

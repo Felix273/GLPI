@@ -1,0 +1,47 @@
+<!-- View Asset Modal -->
+    <div id="viewModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="viewModalTitle">Asset Details</h2>
+                <button class="modal-close" onclick="closeModal('viewModal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="assetDetailHero" class="asset-detail-hero"></div>
+                <div class="asset-detail-tabs">
+                    <button class="tab-btn active" onclick="switchAssetTab('details')">Overview</button>
+                    <button class="tab-btn" onclick="switchAssetTab('financial')">Financial</button>
+                    <button class="tab-btn" onclick="switchAssetTab('assignment')">Assignments</button>
+                    <button class="tab-btn" onclick="switchAssetTab('maintenance')">Maintenance</button>
+                    <button id="assetInventoryTabButton" class="tab-btn" style="display: none;" onclick="switchAssetTab('inventory')"><i class="fas fa-microchip"></i> Inventory</button>
+                    <button class="tab-btn" onclick="switchAssetTab('documents')">Documents</button>
+                    <button class="tab-btn" onclick="switchAssetTab('history')">Activity</button>
+                </div>
+                <div id="assetDetailsTab" class="tab-content"></div>
+                <div id="assetFinancialTab" class="tab-content" style="display: none;"></div>
+                <div id="assetAssignmentTab" class="tab-content" style="display: none;"></div>
+                <div id="assetMaintenanceTab" class="tab-content" style="display: none;"></div>
+                <div id="assetInventoryTab" class="tab-content" style="display: none;">
+                    <div class="inventory-tab-loading">
+                        <div class="spinner"></div>
+                        <p>Loading computer inventory...</p>
+                    </div>
+                </div>
+                <div id="assetDocumentsTab" class="tab-content" style="display: none;">
+                    <div class="documents-section">
+                        <div class="document-upload">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Drag & drop files here or</p>
+                            <input type="file" id="documentUpload" multiple onchange="handleDocumentUpload()">
+                            <button class="btn-secondary btn-sm" onclick="document.getElementById('documentUpload').click()">Browse Files</button>
+                        </div>
+                        <div class="documents-list" id="documentsList">
+                            <div class="document-empty">No documents attached</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="assetHistoryTab" class="tab-content" style="display: none;">
+                    <div class="timeline" id="assetTimeline"></div>
+                </div>
+            </div>
+        </div>
+    </div>
