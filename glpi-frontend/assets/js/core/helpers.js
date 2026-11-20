@@ -7,8 +7,22 @@ function getAllAssetMeta() {
     try { return JSON.parse(localStorage.getItem(META_KEY) || '{}'); } catch { return {}; }
 }
 function getAssetKey(apiType, id) { return `${apiType}:${id}`; }
-function getAssetTypeLabel(apiType) {
-    return Object.values(ASSET_TYPES).find(type => type.api === apiType)?.name || apiType;
+function getAssetTypeLabel(apiType, itemOrMeta) {
+    if (apiType === 'Computer' && itemOrMeta) {
+        if (typeof isAssetInCategory === 'function' && isAssetInCategory(itemOrMeta, 'Laptops')) {
+            return 'Laptop';
+        }
+        return 'CPU';
+    }
+    if (apiType === 'Peripheral' && itemOrMeta) {
+        if (typeof isAssetInCategory === 'function' && isAssetInCategory(itemOrMeta, 'UPS')) {
+            return 'UPS';
+        }
+        return 'Peripheral';
+    }
+    if (apiType === 'laptops' || apiType === 'Laptop') return 'Laptop';
+    if (apiType === 'computers' || apiType === 'CPU') return 'CPU';
+    return Object.values(ASSET_TYPES).find(type => type.api === apiType)?.label || Object.values(ASSET_TYPES).find(type => type.api === apiType)?.name || apiType;
 }
 function addAssetDocument(apiType, id, document) {
     const meta = getAssetMeta(apiType, id);
@@ -87,7 +101,6 @@ function importMetadataFromRow(data) {
         ramInstalled: data.ram_installed || '',
         operatingSystem: data.operating_system || '',
         officeSuite: data.office_suite || '',
-        category: data.category || '',
         location: data.locations_id || data.location || '',
         defaultLocation: data.default_location || '',
         checkedOut: data.checked_out || data.assigned_to || '',

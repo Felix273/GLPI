@@ -594,7 +594,8 @@ async function loadDashboardStats() {
     const apiTypes = [...new Set(DASHBOARD_STATS.map(stat => stat.api))];
     const results = await Promise.all(apiTypes.map(async apiType => {
         try {
-            const items = await glpi.getItems(apiType);
+            const opts = apiType === 'Computer' ? { add_keys_names: ['computertypes_id'] } : {};
+            const items = await glpi.getItems(apiType, opts);
             return { apiType, list: Array.isArray(items) ? items : [] };
         } catch (error) {
             console.error(`Unable to load dashboard assets for ${apiType}:`, error);
@@ -703,7 +704,7 @@ function showDashboardAssetBrowser(mode = 'total') {
     document.getElementById('dashboardAssetsBody').innerHTML = assets.length ? `
         <div class="table-container"><table class="data-table"><thead><tr><th>Asset</th><th>Type</th><th>Status</th><th>Location</th><th>Warranty</th><th></th></tr></thead><tbody>${assets.slice(0, 100).map(asset => {
             const meta = getAssetMeta(asset.assetType, asset.id);
-            return `<tr><td>${escapeHtml(asset.name || 'Unnamed')}</td><td>${escapeHtml(getAssetTypeLabel(asset.assetType))}</td><td>${getStatusBadge(asset)}</td><td>${escapeHtml(String(getAssetLocationLabel(asset, meta)))}</td><td>${renderWarrantyBadge(meta.financial.warrantyExpiry)}</td><td><button class="btn-icon" onclick="closeModal('dashboardAssetsModal');viewAsset('${asset.assetType}',${asset.id})"><i class="fas fa-arrow-right"></i></button></td></tr>`;
+            return `<tr><td>${escapeHtml(asset.name || 'Unnamed')}</td><td>${escapeHtml(getAssetTypeLabel(asset.assetType, asset))}</td><td>${getStatusBadge(asset)}</td><td>${escapeHtml(String(getAssetLocationLabel(asset, meta)))}</td><td>${renderWarrantyBadge(meta.financial.warrantyExpiry)}</td><td><button class="btn-icon" onclick="closeModal('dashboardAssetsModal');viewAsset('${asset.assetType}',${asset.id})"><i class="fas fa-arrow-right"></i></button></td></tr>`;
         }).join('')}</tbody></table></div>
     ` : `<div class="empty-state"><i class="fas fa-box-open"></i><h3>No matching assets</h3><p>This category currently has no records.</p></div>`;
     showModal('dashboardAssetsModal');
@@ -734,7 +735,7 @@ async function loadAssetList(type) {
     if (!assetType) return;
     try {
         await Promise.all([hydrateAllAssetMeta(), ensureUsersLoaded()]);
-        const items = await glpi.getItems(assetType.api, { add_keys_names: ['locations_id'] });
+        const items = await glpi.getItems(assetType.api, { add_keys_names: ['locations_id', 'computertypes_id'] });
         const assets = (Array.isArray(items) ? items : []).map(item => ({ ...item, assetType: assetType.api }));
         state.assets = assetType.category
             ? assets.filter(item => isAssetInCategory(item, assetType.category))
@@ -754,11 +755,13 @@ function isAssetInCategory(asset, category) {
         ...source,
         itemtype: source.assetType || asset.assetType,
         name: asset.name,
+        type: source.type || asset.type || '',
         model: source.model || asset.computermodels_name || asset.peripheraltypes_name || asset.name,
         category: source.category,
-        asset_category: source.category
+        asset_category: source.category,
+        computertypes_name: asset.computertypes_name || asset['computertypes_id_name'] || ''
     };
-    if (['CPU', 'Laptops', 'UPS', 'Peripherals'].includes(category)) {
+    if (['CPU', 'Laptops', 'Laptop', 'UPS', 'Peripherals', 'Peripheral', 'Computers', 'Computer'].includes(category)) {
         return window.GLPIImportFormat.matchesDashboardCategory(importRow, category);
     }
     return true;
@@ -915,7 +918,7 @@ async function showQuickAssignModal() {
     const group = document.getElementById('assignAssetGroup');
     const select = document.getElementById('assignAssetSelect');
     group.style.display = '';
-    select.innerHTML = '<option value="">Choose available equipment...</option>' + available.map(asset => `<option value="${asset.assetType}:${asset.id}">${escapeHtml(asset.name || 'Unnamed')} · ${escapeHtml(getAssetTypeLabel(asset.assetType))}</option>`).join('');
+    select.innerHTML = '<option value="">Choose available equipment...</option>' + available.map(asset => `<option value="${asset.assetType}:${asset.id}">${escapeHtml(asset.name || 'Unnamed')} · ${escapeHtml(getAssetTypeLabel(asset.assetType, asset))}</option>`).join('');
     document.getElementById('assignDate').value = new Date().toISOString().slice(0, 10);
     document.getElementById('assignDueDate').value = '';
     document.getElementById('assignNotes').value = '';
@@ -1089,7 +1092,7 @@ window.confirmDelete = confirmDelete;
 
 async function viewAsset(apiType, id) {
     try {
-        const item = await glpi.getItem(apiType, id, { add_keys_names: ['locations_id'] });
+        const item = await glpi.getItem(apiType, id, { add_keys_names: ['locations_id', 'computertypes_id'] });
         item.assetType = apiType;
         await Promise.all([hydrateAssetMeta(apiType, id), ensureUsersLoaded()]);
         state.viewedAsset = { apiType, id: Number(id), name: item.name || 'Asset', item };
@@ -1097,8 +1100,8 @@ async function viewAsset(apiType, id) {
         const assignedUserId = getAssetUserId(item);
         document.getElementById('viewModalTitle').textContent = item.name || 'Asset details';
         document.getElementById('assetDetailHero').innerHTML = `
-            <div class="asset-hero-icon"><i class="fas ${assetIconForType(apiType)}"></i></div>
-            <div class="asset-hero-copy"><span class="eyebrow">${escapeHtml(getAssetTypeLabel(apiType))}</span><h3>${escapeHtml(item.name || 'Unnamed asset')}</h3><div class="asset-hero-meta">${getStatusBadge(item)}<span><i class="fas fa-barcode"></i>${escapeHtml(item.serial || item.otherserial || `GLPI #${item.id}`)}</span><span><i class="fas fa-location-dot"></i>${escapeHtml(String(getAssetLocationLabel(item, meta)))}</span></div></div>
+            <div class="asset-hero-icon"><i class="fas ${assetIconForType(apiType, item)}"></i></div>
+            <div class="asset-hero-copy"><span class="eyebrow">${escapeHtml(getAssetTypeLabel(apiType, item))}</span><h3>${escapeHtml(item.name || 'Unnamed asset')}</h3><div class="asset-hero-meta">${getStatusBadge(item)}<span><i class="fas fa-barcode"></i>${escapeHtml(item.serial || item.otherserial || `GLPI #${item.id}`)}</span><span><i class="fas fa-location-dot"></i>${escapeHtml(String(getAssetLocationLabel(item, meta)))}</span></div></div>
             <div class="asset-hero-actions"><button class="btn-secondary btn-sm" onclick="showAssignViewedAsset()"><i class="fas fa-user-plus"></i> Assign</button><button class="btn-primary btn-sm" onclick="closeModal('viewModal');editAsset('${apiType}',${id})"><i class="fas fa-pen"></i> Edit</button></div>
         `;
         document.getElementById('assetDetailsTab').innerHTML = `
@@ -1586,7 +1589,15 @@ function detailRow(label, value) {
     return `<div class="detail-item"><span class="detail-label">${escapeHtml(label)}</span><span class="detail-value">${escapeHtml(String(value ?? 'N/A'))}</span></div>`;
 }
 
-function assetIconForType(apiType) {
+function assetIconForType(apiType, item) {
+    if (item && apiType === 'Computer') {
+        const isLaptop = isAssetInCategory(item, 'Laptops');
+        return isLaptop ? 'fa-laptop' : 'fa-desktop';
+    }
+    if (item && apiType === 'Peripheral') {
+        const isUps = isAssetInCategory(item, 'UPS');
+        return isUps ? 'fa-car-battery' : 'fa-keyboard';
+    }
     const view = Object.entries(ASSET_TYPES).find(([, config]) => config.api === apiType)?.[0];
     return DASHBOARD_UI[view]?.icon || 'fa-box';
 }
@@ -1671,17 +1682,19 @@ function renderActivityTimeline(item, meta) {
 
 async function editAsset(apiType, id) {
     try {
-        const item = await glpi.getItem(apiType, id, { add_keys_names: ['locations_id'] });
+        const item = await glpi.getItem(apiType, id, { add_keys_names: ['locations_id', 'computertypes_id'] });
         await hydrateAssetMeta(apiType, id);
         const meta = getAssetMeta(apiType, id);
         state.editAssetId = Number(id);
         state.editAssetType = apiType;
         const pcidGroup = document.getElementById('assetPCIDGroup');
         if (pcidGroup) pcidGroup.style.display = ['Computer', 'Printer'].includes(apiType) ? '' : 'none';
-        document.getElementById('createModalTitle').textContent = `Edit ${item.name || 'Asset'}`;
+        const isLaptop = apiType === 'Computer' && isAssetInCategory(item, 'Laptops');
+        const entityLabel = isLaptop ? 'Laptop' : (apiType === 'Computer' ? 'CPU' : (apiType === 'Peripheral' && isAssetInCategory(item, 'UPS') ? 'UPS' : (item.name || 'Asset')));
+        document.getElementById('createModalTitle').textContent = `Edit ${entityLabel}: ${item.name || 'Asset'}`;
         document.getElementById('assetName').value = item.name || '';
         document.getElementById('assetStatus').value = normalizeAssetStatus(item);
-        document.getElementById('assetType').value = item.type || '';
+        document.getElementById('assetType').value = item.type || meta.importSource?.category || (isLaptop ? 'Laptop' : (apiType === 'Computer' ? 'Desktop' : ''));
         document.getElementById('assetLocation').value = window.GLPIImportFormat.assetLocationDisplayValue(
             item,
             meta.importSource.location || meta.importSource.defaultLocation || ''
@@ -1721,13 +1734,24 @@ async function handleCreateAsset(event) {
         const financial = readFinancialForm();
         const stock = readStockForm();
         const pcid = ['Computer', 'Printer'].includes(state.editAssetType) ? readPCIDForm() : '';
+        const isLaptopType = state.currentAssetType === 'laptops' || /\b(laptop|notebook|macbook|thinkpad|thinkbook|latitude|elitebook|probook)\b/i.test(`${data.type} ${data.name}`);
+        const isCpuType = state.currentAssetType === 'computers' || ['desktop', 'cpu', 'workstation', 'server'].some(t => `${data.type} ${data.name}`.toLowerCase().includes(t));
+        const isUpsType = state.currentAssetType === 'ups' || `${data.type} ${data.name}`.toLowerCase().includes('ups');
+        const resolvedCategory = isLaptopType ? 'Laptop' : (isCpuType ? 'CPU' : (isUpsType ? 'UPS' : (data.type || '')));
+
         if (state.editAssetId) {
             await glpi.updateItem(state.editAssetType, state.editAssetId, data);
+            const prevMeta = getAssetMeta(state.editAssetType, state.editAssetId);
             await saveAssetMeta(state.editAssetType, state.editAssetId, {
                 financial,
                 stock,
                 pcid,
-                importSource: { ...getAssetMeta(state.editAssetType, state.editAssetId).importSource, location: locationValue }
+                importSource: {
+                    ...prevMeta.importSource,
+                    location: locationValue,
+                    category: resolvedCategory || prevMeta.importSource?.category || '',
+                    type: data.type
+                }
             });
             await appendAssetActivity(state.editAssetType, state.editAssetId, { type: 'updated', title: 'Asset details updated', description: 'Core, financial or stock information changed.' });
             showToast('Asset updated successfully.', 'success');
@@ -1735,7 +1759,18 @@ async function handleCreateAsset(event) {
             const created = await glpi.createItem(state.editAssetType, data);
             const createdId = extractItemId(created);
             if (!createdId) throw new Error('GLPI created the item but did not return its ID.');
-            await saveAssetMeta(state.editAssetType, createdId, { financial, stock, pcid });
+            await saveAssetMeta(state.editAssetType, createdId, {
+                financial,
+                stock,
+                pcid,
+                importSource: {
+                    assetType: state.editAssetType,
+                    category: resolvedCategory,
+                    location: locationValue,
+                    type: data.type,
+                    model: data.type
+                }
+            });
             await appendAssetActivity(state.editAssetType, createdId, { type: 'created', title: 'Asset created', description: `${data.name} was registered in GLPI.` });
             showToast('Asset created successfully.', 'success');
         }

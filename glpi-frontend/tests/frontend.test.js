@@ -62,10 +62,18 @@ describe('computer CSV import format', () => {
 
     it('classifies laptop rows for the Laptop view while keeping them GLPI Computers', () => {
         expect(csvImportHelpers.isLaptopImportRow({ itemtype: 'Laptop', model: 'Generic Model' })).toBe(true);
+        expect(csvImportHelpers.isLaptopImportRow({ type: 'Laptop' })).toBe(true);
         expect(csvImportHelpers.isLaptopImportRow({ model: 'Dell Latitude 5420' })).toBe(true);
         expect(csvImportHelpers.isLaptopImportRow({ model: 'HP EliteBook 840 G8' })).toBe(true);
         expect(csvImportHelpers.isLaptopImportRow({ model: 'Dell OptiPlex 7090' })).toBe(false);
         expect(csvImportHelpers.resolveImportItemType({ itemtype: 'Laptop', model: 'Dell Latitude 5420' })).toBe('Computer');
+        // native GLPI computer-type name fallback (assets created directly in GLPI, not via CSV import)
+        expect(csvImportHelpers.isLaptopImportRow({ computertypes_name: 'Laptop' })).toBe(true);
+        expect(csvImportHelpers.isLaptopImportRow({ computertypes_id_name: 'Laptop' })).toBe(true);
+        expect(csvImportHelpers.isLaptopImportRow({ computertypes_name: 'Laptops' })).toBe(true);
+        expect(csvImportHelpers.isLaptopImportRow({ computertypes_name: 'Notebook' })).toBe(true);
+        expect(csvImportHelpers.isLaptopImportRow({ computertypes_name: 'Desktop' })).toBe(false);
+        expect(csvImportHelpers.isLaptopImportRow({ computertypes_name: 'Workstation' })).toBe(false);
     });
 
     it('partitions dashboard Computer and Peripheral assets into exclusive categories', () => {
@@ -76,9 +84,13 @@ describe('computer CSV import format', () => {
         const otherPeripheral = { itemtype: 'Peripheral', model: 'Scanner' };
 
         expect(csvImportHelpers.matchesDashboardCategory(laptop, 'Laptops')).toBe(true);
+        expect(csvImportHelpers.matchesDashboardCategory(laptop, 'Laptop')).toBe(true);
         expect(csvImportHelpers.matchesDashboardCategory(laptop, 'CPU')).toBe(false);
+        expect(csvImportHelpers.matchesDashboardCategory(laptop, 'Computers')).toBe(false);
         expect(csvImportHelpers.matchesDashboardCategory(desktop, 'CPU')).toBe(true);
+        expect(csvImportHelpers.matchesDashboardCategory(desktop, 'Computers')).toBe(true);
         expect(csvImportHelpers.matchesDashboardCategory(desktop, 'Laptops')).toBe(false);
+        expect(csvImportHelpers.matchesDashboardCategory(desktop, 'Laptop')).toBe(false);
         expect(csvImportHelpers.matchesDashboardCategory(ups, 'UPS')).toBe(true);
         expect(csvImportHelpers.matchesDashboardCategory(ups, 'Peripherals')).toBe(false);
         expect(csvImportHelpers.matchesDashboardCategory(keyboard, 'Peripherals')).toBe(true);

@@ -76,8 +76,8 @@ const state = {
 };
 
 const ASSET_TYPES = {
-  computers: { name: "Computer", api: "Computer", label: "Computers" },
-    laptops: { name: "Laptop", api: "Computer", label: "Laptops", category: "Laptop" },
+  computers: { name: "Computer", api: "Computer", label: "CPU", category: "CPU" },
+  laptops: { name: "Laptop", api: "Computer", label: "Laptops", category: "Laptops" },
   monitors: { name: "Monitor", api: "Monitor", label: "Monitors" },
   peripherals: { name: "Peripheral", api: "Peripheral", label: "Peripherals", category: "Peripherals" },
   ups: { name: "UPS", api: "Peripheral", label: "UPS", category: "UPS" },
@@ -236,7 +236,7 @@ const CHART_COLORS = {
 
 const DASHBOARD_UI = {
   computers: {
-    icon: "fa-laptop",
+    icon: "fa-desktop",
     color: "#2563eb",
     tint: "rgba(37, 99, 235, .12)",
   },
@@ -330,7 +330,7 @@ function setupEventListeners() {
       "click",
       () =>
         state.currentAssetType &&
-        showCreateModal(ASSET_TYPES[state.currentAssetType].api),
+        showCreateModal(state.currentAssetType),
     );
   document
     .getElementById("globalSearch")

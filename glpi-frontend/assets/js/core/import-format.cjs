@@ -124,18 +124,23 @@ function isUpsImportRow(row) {
 }
 
 function isLaptopImportRow(row) {
-    const type = String(row?.itemtype || row?.asset_type || '').trim().toLowerCase();
-    if (type === 'laptop' || type === 'notebook') return true;
+    const type = String(row?.itemtype || row?.asset_type || row?.type || '').trim().toLowerCase();
+    if (type === 'laptop' || type === 'notebook' || type === 'laptops') return true;
 
     const category = String(row?.asset_category || row?.category || '').trim().toLowerCase();
-    if (category === 'laptop' || category === 'notebook') return true;
+    if (category === 'laptop' || category === 'notebook' || category === 'laptops') return true;
+
+    // Use the resolved GLPI computer-type name as a reliable native fallback
+    // (present when add_keys_names: ['computertypes_id'] is passed to the API)
+    const glpiTypeName = String(row?.computertypes_name || row?.computertypes_id_name || '').trim().toLowerCase();
+    if (glpiTypeName === 'laptop' || glpiTypeName === 'notebook' || glpiTypeName === 'laptops') return true;
 
     const identifyingText = [row?.model, row?.name, row?.asset_name].filter(Boolean).join(' ');
     return /\b(laptop|notebook|macbook|thinkpad|thinkbook|latitude|elitebook|probook|travelmate|chromebook|surface\s+pro|surface\s+laptop|zenbook|vivobook|pavilion|inspiron)\b/i.test(identifyingText);
 }
 
 function isKeyboardImportRow(row) {
-    const type = String(row?.itemtype || row?.asset_type || '').trim().toLowerCase();
+    const type = String(row?.itemtype || row?.asset_type || row?.type || '').trim().toLowerCase();
     if (type === 'keyboard' || type === 'keyboards') return true;
 
     const category = String(row?.asset_category || row?.category || '').trim().toLowerCase();
@@ -150,9 +155,9 @@ function matchesDashboardCategory(row, category) {
     const laptop = isLaptopImportRow(row);
     const keyboard = isKeyboardImportRow(row);
     if (category === 'UPS') return ups;
-    if (category === 'Peripherals') return keyboard && !ups;
-    if (category === 'Laptops') return laptop;
-    if (category === 'CPU') return !laptop;
+    if (category === 'Peripherals' || category === 'Peripheral') return keyboard && !ups;
+    if (category === 'Laptops' || category === 'Laptop') return laptop;
+    if (category === 'CPU' || category === 'Computers' || category === 'Computer') return !laptop;
     return true;
 }
 function resolveImportItemType(row, fallbackType = 'Computer') {

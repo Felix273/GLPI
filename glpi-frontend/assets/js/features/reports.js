@@ -20,7 +20,8 @@ async function loadReports() {
         const results = await Promise.all(
             [...OPERATIONAL_ASSET_APIS].map(async apiType => {
                 try {
-                    const items = await glpi.getItems(apiType);
+                    const opts = apiType === 'Computer' ? { add_keys_names: ['computertypes_id'] } : {};
+                    const items = await glpi.getItems(apiType, opts);
                     return (Array.isArray(items) ? items : []).map(item => ({
                         ...item,
                         assetType: apiType
@@ -51,7 +52,7 @@ async function loadReports() {
                 asset,
                 meta,
                 name: asset.name || 'Unnamed',
-                type: getAssetTypeLabel(asset.assetType),
+                type: getAssetTypeLabel(asset.assetType, asset),
                 apiType: asset.assetType,
                 tag: asset.otherserial || '',
                 serial: asset.serial || '',

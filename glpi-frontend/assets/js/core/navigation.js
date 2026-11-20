@@ -80,7 +80,7 @@ async function navigateTo(view) {
   } else if (ASSET_TYPES[view]) {
     document.getElementById("assetListView").classList.add("active");
     document.getElementById("assetListTitle").textContent =
-      ASSET_TYPES[view].name + "s";
+      ASSET_TYPES[view].label || (ASSET_TYPES[view].name + "s");
     state.currentAssetType = view;
     try {
       await loadAssetList(view);
