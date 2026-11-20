@@ -112,7 +112,7 @@ function handleNotificationClick(id) {
 
 function loadStoredNotifications() {
     const stored = localStorage.getItem('glpi_notifications');
-    if (stored) state.notifications = JSON.parse(stored);
+    if (stored) { try { const parsed = JSON.parse(stored); state.notifications = Array.isArray(parsed) ? parsed : []; } catch { state.notifications = []; } }
     updateNotificationBadge();
 }
 
@@ -263,7 +263,7 @@ function loadAlerts() {
                 <div class="alert-desc">${escapeHtml(a.desc)}</div>
             </div>
             <div class="alert-time">${formatDate(a.time)}</div>
-            <button class="alert-dismiss" onclick="dismissAlert('${escapeAttribute(a.key || a.time)}'); loadAlerts();" title="Dismiss"><i class="fas fa-times"></i></button>
+            <button class="alert-dismiss" onclick="event.stopPropagation(); dismissAlert('${escapeAttribute(a.key || a.time)}'); loadAlerts();" title="Dismiss"><i class="fas fa-times"></i></button>
         </div>
     `).join('');
 }
@@ -273,6 +273,7 @@ function addAlert(title, desc, type, key, target = null) {
     const alertKey = key || `${type}-${title}-${desc}`;
     const dismissed = getDismissedAlertKeys();
     if (dismissed.has(String(alertKey))) return;
+    if (state.alerts.some(a => String(a.key) === String(alertKey))) return;
     state.alerts.push({
         type,
         title,

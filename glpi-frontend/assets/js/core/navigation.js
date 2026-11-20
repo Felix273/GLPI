@@ -15,8 +15,13 @@ function showViewError(view, message) {
   const viewElement = document.getElementById(viewId);
   if (!viewElement) return;
   viewElement.classList.add("active");
-  const content = viewElement.querySelector(".view-content") || viewElement;
-  content.innerHTML = `<div class="view-error-boundary"><i class="fas fa-triangle-exclamation"></i><h3>Something went wrong</h3><p>${escapeHtml(message || "Unable to load this view.")}</p><button class="btn-secondary" onclick="navigateTo('${view}')">Retry</button></div>`;
+  let boundary = viewElement.querySelector(":scope > .view-error-boundary");
+  if (!boundary) {
+    boundary = document.createElement("div");
+    boundary.className = "view-error-boundary";
+    viewElement.prepend(boundary);
+  }
+  boundary.innerHTML = `<i class="fas fa-triangle-exclamation"></i><h3>Something went wrong</h3><p>${escapeHtml(message || "Unable to load this view.")}</p><button class="btn-secondary" onclick="navigateTo('${escapeAttribute(view)}')">Retry</button>`;
 }
 
 async function navigateTo(view) {
@@ -29,6 +34,7 @@ async function navigateTo(view) {
   updatePageContext(view);
   state.selectedAssets.clear();
   state.currentPage = 1;
+  document.querySelectorAll(".view > .view-error-boundary").forEach((el) => el.remove());
   document
     .querySelectorAll(".view")
     .forEach((v) => v.classList.remove("active"));
@@ -99,6 +105,7 @@ function updatePageContext(view) {
   const specialViews = {
     dashboard: ["Dashboard", "Overview"],
     reports: ["Reports", "Inventory intelligence"],
+    alerts: ["Alerts", "Monitoring"],
     settings: ["Settings", "Administration"],
     import: ["Import assets", "Data tools"],
     inventoryHealth: ["Inventory health", "Operations"],
@@ -577,10 +584,10 @@ function renderSidebarGroupChildren(group, groupIndex) {
 
 function toggleSidebarItem(groupIndex, visible) {
   const config = getSidebarConfig(state.systemSettings);
-  if (!config.items[groupIndex] || config.items[groupIndex].type !== "group") return;
-
-  const group = config.items[groupIndex];
-  (group.items || []).forEach((sub) => { sub.visible = visible; });
+  const item = config.items[groupIndex];
+  if (!item) return;
+  if (item.type === "group") (item.items || []).forEach((sub) => { sub.visible = visible; });
+  else item.visible = visible;
 
   state.systemSettings = state.systemSettings || {};
   state.systemSettings.sidebar = state.systemSettings.sidebar || {};

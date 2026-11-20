@@ -29,23 +29,28 @@ window.exportAllAssets = async function() {
     exportToCSV(all, 'All_Assets');
     showToast('Done!', 'success');
 };
+function csvCell(value) {
+    let text = String(value ?? '');
+    if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+    return `"${text.replace(/"/g, '""')}"`;
+}
+function downloadCsvBlob(csv, name) {
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${name}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 function exportToCSV(data, name) {
     if (!data.length) return showToast('No data', 'error');
     const h = Object.keys(data[0]);
-    const csv = [h.join(','), ...data.map(r => h.map(k => `"${(r[k] || '').toString().replace(/"/g, '""')}"`).join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${name}_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+    const csv = [h.map(csvCell).join(','), ...data.map(r => h.map(k => csvCell(r[k])).join(','))].join('\n');
+    downloadCsvBlob(csv, name);
 }
 function exportToCSVRows(rows, name) {
-    const csv = rows.map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${name}_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+    const csv = rows.map(row => row.map(csvCell).join(',')).join('\n');
+    downloadCsvBlob(csv, name);
 }
 window.exportReport = function() {
     const rows = state.filteredReportRows.length ? state.filteredReportRows : state.reportRows;

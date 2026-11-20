@@ -31,6 +31,7 @@ GLPI_PUBLIC="$ROOT/glpi/public"
 FRONTEND="$ROOT/glpi-frontend"
 GLPI_PORT=8099
 FRONTEND_PORT=8091
+export GLPI_BACKEND_URL="http://127.0.0.1:${GLPI_PORT}"
 
 # Bind to 0.0.0.0 so the stack is reachable via the machine LAN IP
 # (e.g. 192.168.49.4) which usually bypasses a browser/forward proxy that

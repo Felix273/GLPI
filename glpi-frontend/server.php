@@ -29,21 +29,24 @@ require_once __DIR__ . '/lib/functions.php';
 $trustedOrigins = array_filter(array_map('trim', explode(',', (string) getenv('TRUSTED_ORIGINS'))));
 if (!$trustedOrigins) {
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    $port = parse_url("{$scheme}://{$host}", PHP_URL_PORT) ?: ($scheme === 'https' ? 443 : 80);
+    $port = (int) ($_SERVER['SERVER_PORT'] ?? ($scheme === 'https' ? 443 : 80));
     $defaultPort = $scheme === 'https' ? 443 : 80;
+    $suffix = ($port > 0 && $port !== $defaultPort) ? ":{$port}" : '';
     $trustedOrigins = [
-        "{$scheme}://localhost" . ($port !== $defaultPort ? ":{$port}" : ''),
-        "{$scheme}://127.0.0.1" . ($port !== $defaultPort ? ":{$port}" : ''),
+        "{$scheme}://localhost{$suffix}",
+        "{$scheme}://127.0.0.1{$suffix}",
     ];
 }
 
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if ($origin && in_array($origin, $trustedOrigins, true)) {
-    header("Access-Control-Allow-Origin: {$origin}");
-    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Authorization, Session-Token, App-Token');
-    header('Access-Control-Allow-Credentials: true');
+if ($origin !== '') {
+    header('Vary: Origin');
+    if (in_array($origin, $trustedOrigins, true)) {
+        header("Access-Control-Allow-Origin: {$origin}");
+        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type, Authorization, Session-Token, App-Token');
+        header('Access-Control-Allow-Credentials: true');
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -77,7 +80,10 @@ function handleBackend(string $route, string $method): void
         } elseif ($route === 'logout' && $method === 'POST') {
             handleLogout();
         } elseif ($route === 'session' && $method === 'GET') {
-            jsonResponse(['authenticated' => isset($_SESSION['glpi'])]);
+            jsonResponse([
+                'authenticated' => isset($_SESSION['glpi']),
+                'session' => $_SESSION['glpi_session_info'] ?? null,
+            ]);
         } elseif (str_starts_with($route, 'glpi/')) {
             proxyGlpi(substr($route, 5), $method);
         } elseif ($route === 'settings/public' && $method === 'GET') {
@@ -124,16 +130,42 @@ class GlpiApiException extends RuntimeException
     }
 }
 
+function isAllowedGlpiUrl(string $url): bool
+{
+    $parts = parse_url($url);
+    if (!is_array($parts)) {
+        return false;
+    }
+    $scheme = strtolower((string)($parts['scheme'] ?? ''));
+    $host = strtolower((string)($parts['host'] ?? ''));
+    if (!in_array($scheme, ['http', 'https'], true) || $host === '') {
+        return false;
+    }
+
+    $allowedUrls = array_filter(array_map('trim', explode(',', (string) getenv('ALLOWED_GLPI_URLS'))));
+    foreach ($allowedUrls as $allowed) {
+        if (strcasecmp(rtrim($allowed, '/'), rtrim($url, '/')) === 0) {
+            return true;
+        }
+    }
+
+    return in_array($host, ['localhost', '127.0.0.1', '::1'], true);
+}
+
 function handleSessionStart(): void
 {
     $body = jsonBody();
+    $configuredUrl = rtrim((string) getenv('GLPI_BACKEND_URL'), '/');
     $requestedUrl = rtrim((string)($body['url'] ?? ''), '/');
-    $url = rtrim((string)(getenv('GLPI_BACKEND_URL') ?: $requestedUrl), '/');
+    $url = $configuredUrl !== '' ? $configuredUrl : $requestedUrl;
     $token = (string)($body['token'] ?? '');
     $appToken = (string)($body['appToken'] ?? '');
 
     if ($url === '' || $token === '') {
         jsonResponse(['error' => 'GLPI URL and user token are required'], 422);
+    }
+    if ($configuredUrl === '' && !isAllowedGlpiUrl($url)) {
+        jsonResponse(['error' => 'GLPI URL host is not in the server allowlist'], 422);
     }
 
     $session = glpiHttp($url, '/initSession', 'GET', null, $token, null, $appToken);
@@ -142,14 +174,17 @@ function handleSessionStart(): void
         jsonResponse(['error' => 'GLPI did not return a session token'], 502);
     }
 
+    $info = glpiHttp($url, '/getFullSession', 'GET', null, $token, $sessionToken, $appToken);
+
+    session_regenerate_id(true);
     $_SESSION['glpi'] = [
         'url' => $url,
         'user_token' => $token,
         'app_token' => $appToken,
         'session_token' => $sessionToken,
     ];
+    $_SESSION['glpi_session_info'] = $info;
 
-    $info = glpiHttp($url, '/getFullSession', 'GET', null, $token, $sessionToken, $appToken);
     jsonResponse(['session_token' => $sessionToken, 'session' => $info]);
 }
 
@@ -163,7 +198,10 @@ function handleLogout(): void
             // Local logout should still clear the browser session if GLPI is unavailable.
         }
     }
-    unset($_SESSION['glpi']);
+    unset($_SESSION['glpi'], $_SESSION['glpi_session_info']);
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_regenerate_id(true);
+    }
     jsonResponse(['ok' => true]);
 }
 
@@ -175,10 +213,12 @@ function proxyGlpi(string $endpoint, string $method): void
     if ($query !== '') {
         $path .= '?' . $query;
     }
-    $body = in_array($method, ['POST', 'PUT'], true) ? file_get_contents('php://input') : null;
+    $body = in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true) ? file_get_contents('php://input') : null;
     $payload = $body ? json_decode($body, true) : null;
-    $response = glpiHttp($glpi['url'], $path, $method, $payload, $glpi['user_token'], $glpi['session_token'], $glpi['app_token']);
-    jsonResponse($response);
+    $httpStatus = 200;
+    $response = glpiHttp($glpi['url'], $path, $method, $payload, $glpi['user_token'], $glpi['session_token'], $glpi['app_token'], $httpStatus);
+    if ($httpStatus === 204) { http_response_code(204); exit; }
+    jsonResponse($response, ($httpStatus >= 200 && $httpStatus < 400) ? $httpStatus : 200);
 }
 
 
@@ -610,7 +650,7 @@ function ensureGlpiAuthLdap(array $glpi, array $configuration): int
 
     $fields = [
         'name' => $connectionName,
-        'host' => trim((string)$configuration['host']),
+        'host' => (!empty($configuration['useLdaps']) && !preg_match('#^ldaps?://#i', trim((string)$configuration['host'])) ? 'ldaps://' : '') . trim((string)$configuration['host']),
         'port' => (int)$configuration['port'],
         'basedn' => trim((string)$configuration['baseDn']),
         'rootdn' => trim((string)($configuration['bindDn'] ?? '')),
@@ -1716,7 +1756,7 @@ function glpiRequest(string $path): array
     return glpiHttp($glpi['url'], $path, 'GET', null, $glpi['user_token'], $glpi['session_token'], $glpi['app_token']);
 }
 
-function glpiHttp(string $baseUrl, string $path, string $method, ?array $payload, string $userToken, ?string $sessionToken, string $appToken): array
+function glpiHttp(string $baseUrl, string $path, string $method, ?array $payload, string $userToken, ?string $sessionToken, string $appToken, ?int &$httpStatus = null): array
 {
     $url = rtrim($baseUrl, '/') . '/apirest.php' . $path;
 
@@ -1742,7 +1782,8 @@ function glpiHttp(string $baseUrl, string $path, string $method, ?array $payload
     }
 
     $raw = curl_exec($ch);
-    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $httpStatus = $status;
     $error = curl_error($ch);
     curl_close($ch);
 
@@ -1757,91 +1798,6 @@ function glpiHttp(string $baseUrl, string $path, string $method, ?array $payload
     }
 
     return is_array($decoded) ? $decoded : ['raw' => $raw];
-}
-
-function handleImport(): void
-{
-    $glpi = requireGlpiSession();
-
-    if (!isset($_FILES['csv']) || $_FILES['csv']['error'] !== UPLOAD_ERR_OK) {
-        jsonResponse(['error' => 'CSV file upload is required'], 422);
-    }
-    $itemtype = trim((string)($_POST['itemtype'] ?? ''));
-    if ($itemtype === '') {
-        jsonResponse(['error' => 'Asset type is required'], 422);
-    }
-    $delimiter = ($_POST['delimiter'] ?? ';') === ',' ? ',' : ';';
-
-    $rows = [];
-    if (($fh = fopen($_FILES['csv']['tmp_name'], 'r')) !== false) {
-        while (($data = fgetcsv($fh, 0, $delimiter)) !== false) {
-            $rows[] = $data;
-        }
-        fclose($fh);
-    }
-    if (count($rows) < 2) {
-        jsonResponse(['error' => 'CSV has no data rows'], 422);
-    }
-
-    $header = array_map('trim', array_shift($rows));
-    $cache = [];
-    $resolve = function (string $col, string $value) use (&$cache, $glpi): ?int {
-        $base = preg_replace('/_id$/', '', $col);
-        $base = rtrim($base, 's');
-        $drop = ucfirst($base);
-        $key = $drop . '|' . strtolower($value);
-        if (array_key_exists($key, $cache)) {
-            return $cache[$key];
-        }
-        $id = glpiFind($glpi, $drop, $value);
-        if ($id === null) {
-            $id = glpiCreate($glpi, $drop, ['name' => $value]);
-        }
-        $cache[$key] = $id;
-        return $id;
-    };
-
-    $inputs = [];
-    $errors = [];
-    foreach ($rows as $i => $row) {
-        if (count($row) !== count($header)) {
-            $errors[] = 'Row ' . ($i + 1) . ': column count mismatch';
-            continue;
-        }
-        $input = [];
-        foreach ($header as $idx => $col) {
-            $col = trim($col);
-            $val = trim((string)($row[$idx] ?? ''));
-            if ($val === '') {
-                continue;
-            }
-            if (str_ends_with($col, '_id')) {
-                $id = $resolve($col, $val);
-                if ($id === null) {
-                    $errors[] = 'Row ' . ($i + 1) . ': could not resolve ' . $col . '=' . $val;
-                    continue;
-                }
-                $input[$col] = $id;
-            } else {
-                $input[$col] = $val;
-            }
-        }
-        if (!empty($input)) {
-            $inputs[] = $input;
-        }
-    }
-
-    $imported = 0;
-    if (!empty($inputs)) {
-        $result = glpiCreate($glpi, $itemtype, $inputs);
-        if (is_array($result)) {
-            $imported = count($result);
-        } elseif ($result !== null) {
-            $imported = 1;
-        }
-    }
-
-    jsonResponse(['imported' => $imported, 'total' => count($inputs), 'errors' => $errors, 'itemtype' => $itemtype]);
 }
 
 function glpiFind(array $glpi, string $itemtype, string $name): ?int
@@ -1958,7 +1914,7 @@ function writeJsonFile(string $file, mixed $data): void
     if (!is_dir(dirname($file))) {
         mkdir(dirname($file), 0775, true);
     }
-    file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT));
+    file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT), LOCK_EX);
 }
 
 function jsonBody(): array
@@ -2059,6 +2015,10 @@ function serveStatic(string $path): void
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
     header('Pragma: no-cache');
     header('Expires: 0');
+    header('X-Content-Type-Options: nosniff');
+    if ($extension === 'svg') {
+        header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox");
+    }
     header(
         'Content-Type: ' .
         ($mimeTypes[$extension] ?? 'application/octet-stream')

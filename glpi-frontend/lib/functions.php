@@ -39,19 +39,21 @@ function rateLimit(string $key, int $max = RATE_LIMIT_MAX, int $window = RATE_LI
 {
     $file = RATE_LIMIT_DIR . '/' . md5($key) . '.json';
     @mkdir(RATE_LIMIT_DIR, 0777, true);
-
     $now = time();
     $data = ['timestamp' => $now, 'count' => 1];
-
-    if (is_file($file)) {
-        $stored = json_decode((string) file_get_contents($file), true);
-        if (is_array($stored) && isset($stored['timestamp']) && ($now - $stored['timestamp']) < $window) {
-            $data = ['timestamp' => $stored['timestamp'], 'count' => $stored['count'] + 1];
+    $fp = @fopen($file, 'c+');
+    if ($fp !== false) {
+        if (flock($fp, LOCK_EX)) {
+            $raw = stream_get_contents($fp);
+            $stored = $raw ? json_decode($raw, true) : null;
+            if (is_array($stored) && isset($stored['timestamp']) && ($now - $stored['timestamp']) < $window) {
+                $data = ['timestamp' => $stored['timestamp'], 'count' => $stored['count'] + 1];
+            }
+            ftruncate($fp, 0); rewind($fp); fwrite($fp, (string) json_encode($data)); fflush($fp);
+            flock($fp, LOCK_UN);
         }
+        fclose($fp);
     }
-
-    file_put_contents($file, json_encode($data));
-
     return $data['count'] <= $max;
 }
 
@@ -73,6 +75,10 @@ function configuredRateLimit(string $key): bool
  */
 function sanitizeSvg(string $svg): string|false
 {
+    if (preg_match('/<!(?:DOCTYPE|ENTITY)/i', $svg)) {
+        return false;
+    }
+
     $dom = new DOMDocument();
     libxml_use_internal_errors(true);
     if (!@$dom->loadXML($svg, LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_NONET)) {
@@ -80,50 +86,56 @@ function sanitizeSvg(string $svg): string|false
         return false;
     }
 
+    if (!$dom->documentElement || strtolower($dom->documentElement->localName) !== 'svg') {
+        libxml_clear_errors();
+        return false;
+    }
+
     $xpath = new DOMXPath($dom);
     $xpath->registerNamespace('svg', 'http://www.w3.org/2000/svg');
 
-    $dangerousAttrs = [
-        'onload', 'onerror', 'onclick', 'onmouseover', 'onfocus', 'onblur',
-        'onchange', 'onsubmit', 'onkeydown', 'onkeyup', 'onkeypress',
-        'onpointerdown', 'onpointermove', 'onpointerup', 'onabort',
-        'oncanplay', 'oncanplaythrough', 'oncuechange', 'ondurationchange',
-        'onemptied', 'onended', 'onloadeddata', 'onloadedmetadata',
-        'onloadstart', 'onpause', 'onplay', 'onplaying', 'onprogress',
-        'onratechange', 'onseeked', 'onseeking', 'onstalled', 'onsuspend',
-        'ontimeupdate', 'onvolumechange', 'onwaiting', 'onreset', 'oninput',
-        'oninvalid', 'oncontextmenu', 'oncopy', 'oncut', 'onpaste', 'onwheel',
-        'ontouchstart', 'ontouchmove', 'ontouchend'
+    $dangerousElements = [
+        'script', 'foreignObject', 'handler', 'iframe', 'object', 'embed',
+        'animate', 'animateMotion', 'animateTransform', 'set', 'use',
+        'image', 'style', 'audio', 'video', 'meta', 'link',
     ];
-    $dangerousElements = ['script', 'foreignObject', 'handler', 'iframe', 'object', 'embed'];
 
     foreach ($dangerousElements as $el) {
-        $nodes = $xpath->query("//svg:" . $el . " | //" . $el);
-        foreach ($nodes as $node) {
+        $nodes = $xpath->query(
+            "//svg:{$el} | //*[translate(local-name(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz') = '" . strtolower($el) . "']"
+        );
+        foreach (iterator_to_array($nodes ?: []) as $node) {
             if ($node instanceof DOMNode) {
                 $node->parentNode?->removeChild($node);
             }
         }
     }
 
-    foreach ($dangerousAttrs as $attr) {
-        $nodes = $xpath->query("//@*[starts-with(translate(local-name(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{$attr}')]");
-        foreach ($nodes as $node) {
-            if ($node instanceof DOMAttr) {
-                $node->ownerElement?->removeAttributeNode($node);
-            }
+    $eventAttrs = $xpath->query(
+        "//@*[starts-with(translate(local-name(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'on')]"
+    );
+    foreach (iterator_to_array($eventAttrs ?: []) as $attr) {
+        if ($attr instanceof DOMAttr) {
+            $attr->ownerElement?->removeAttributeNode($attr);
         }
     }
 
-    $links = $xpath->query('//svg:a | //a');
-    foreach ($links as $link) {
-        if ($link instanceof DOMElement) {
-            foreach (['href', 'xlink:href', 'src'] as $attr) {
-                $val = $link->getAttribute($attr);
-                if ($val && preg_match('/javascript:/i', $val)) {
-                    $link->removeAttribute($attr);
-                }
+    $allAttrs = $xpath->query('//@*');
+    foreach (iterator_to_array($allAttrs ?: []) as $attr) {
+        if (!$attr instanceof DOMAttr) {
+            continue;
+        }
+        $rawName = $attr->localName ?: $attr->nodeName;
+        $name = strtolower((string) preg_replace('/^.*:/', '', (string) $rawName));
+        $rawVal = (string) $attr->value;
+        $compactVal = preg_replace('/[\x00-\x20]+/', '', $rawVal) ?? $rawVal;
+
+        if (in_array($name, ['href', 'src', 'action', 'formaction', 'poster', 'data', 'to', 'from', 'values'], true)) {
+            if (preg_match('/^(?:javascript|vbscript|data):/i', $compactVal)) {
+                $attr->ownerElement?->removeAttributeNode($attr);
             }
+        } elseif ($name === 'style' && preg_match('/(?:expression|javascript|vbscript|url\s*\()/i', $compactVal)) {
+            $attr->ownerElement?->removeAttributeNode($attr);
         }
     }
 

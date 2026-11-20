@@ -405,12 +405,19 @@ function updateThemeButton(theme) {
 
 // Auth
 function checkSavedSession() {
-  const config = localStorage.getItem("glpi_config");
-  if (!config) {
-    if (!glpi.backendMode) {
+  if (glpi.backendMode) {
+    localStorage.removeItem("glpi_config");
+    if (glpi.backendAuthenticated) {
+      state.user = glpi.sessionInfo?.session || glpi.sessionInfo || null;
       showApp();
       return;
     }
+    showLogin();
+    return;
+  }
+
+  const config = localStorage.getItem("glpi_config");
+  if (!config) {
     showLogin();
     return;
   }
@@ -462,10 +469,14 @@ async function handleLogin(e) {
   try {
     glpi.init(url, token, appToken);
     await glpi.initSession();
-    localStorage.setItem(
-      "glpi_config",
-      JSON.stringify({ url, token, appToken }),
-    );
+    if (glpi.backendMode) {
+      localStorage.removeItem("glpi_config");
+    } else {
+      localStorage.setItem(
+        "glpi_config",
+        JSON.stringify({ url, token, appToken }),
+      );
+    }
     const session = await glpi.getMyInfo();
     state.user = session.session;
     showApp();

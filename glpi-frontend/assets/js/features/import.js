@@ -128,7 +128,7 @@ window.confirmImport = async function() {
             const created = await glpi.createItem(apiType, payload);
             const id = extractItemId(created);
             if (id) {
-                saveAssetMeta(apiType, id, { financial: financialFromImport(data), stock: stockFromImport(data), importSource: importMetadataFromRow(data) });
+                await saveAssetMeta(apiType, id, { financial: financialFromImport(data), stock: stockFromImport(data), importSource: importMetadataFromRow(data) });
             }
             results.push({ row: index + 2, status: 'ok', name: payload.name, itemtype: apiType, id });
             success++;
@@ -980,7 +980,7 @@ function importTypeField(apiType) {
 }
 
 function isPositiveInteger(value) {
-    return /^\d+$/.test(String(value || '').trim());
+    return /^[1-9]\d*$/.test(String(value || '').trim());
 }
 
 function importHeaderLabel(header) {

@@ -407,7 +407,7 @@ async function hydrateAllAssetMeta() {
                 }));
                 local[key] = { ...localMeta, ...remoteMeta, documents };
             });
-            localStorage.setItem(META_KEY, JSON.stringify(local));
+            setAllAssetMetaCache(local);
             state.dashboardMetadataLoaded = true;
         }
     } catch (error) {
@@ -436,7 +436,7 @@ function saveAssetMeta(apiType, id, patch) {
     const all = getAllAssetMeta();
     const key = getAssetKey(apiType, id);
     all[key] = { ...(all[key] || {}), ...patch };
-    localStorage.setItem(META_KEY, JSON.stringify(all));
+    setAllAssetMetaCache(all);
     return glpi.saveMetadata(apiType, id, all[key]).catch(error => {
         console.warn('Metadata sync failed:', error);
         return null;
@@ -520,6 +520,11 @@ async function loadDashboardSoftware() {
     });
 
     renderSoftwareList();
+    if (!state.softwareMatrixData && glpi.backendMode) {
+        glpi.getSoftwareInstallations().then(data => {
+            if (data) { state.softwareMatrixData = data; renderSoftwareList(); }
+        }).catch(() => {});
+    }
 }
 
 function renderSoftwareList() {
@@ -527,7 +532,17 @@ function renderSoftwareList() {
     if (!tbody) return;
 
     try {
-        const matrixData = state.softwareMatrixData || [];
+        const matrixData = state.softwareMatrixData;
+        if (Array.isArray(matrixData?.matrix) && matrixData.matrix.length) {
+            tbody.innerHTML = matrixData.matrix.slice(0, 8).map(sw => `
+                <tr onclick="navigateTo('softwareMatrix')" style="cursor: pointer;">
+                    <td data-label="Software"><strong>${escapeHtml(sw.name)}</strong></td>
+                    <td data-label="Installs">${Number(sw.installCount || 0)}</td>
+                    <td data-label="Computers">${Number(sw.computerCount || 0)}</td>
+                    <td data-label="Versions">${Number(sw.versionCount || 0)}</td>
+                </tr>`).join('');
+            return;
+        }
         if (!matrixData || !Array.isArray(matrixData.installations) || !matrixData.installations.length) {
             tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state compact"><i class="fas fa-software-stack"></i><h3>No software data</h3><p>Software inventory data is not available.</p></div></td></tr>';
             return;
@@ -1789,7 +1804,7 @@ function setupWarrantyCalculator() {
     const months = document.getElementById('assetWarranty');
     const expiry = document.getElementById('assetWarrantyExpiry');
     const calculate = () => {
-        if (!purchase?.value || !months?.value || expiry?.value) return;
+        if (!purchase?.value || !months?.value) return;
         const date = new Date(`${purchase.value}T00:00:00`);
         date.setMonth(date.getMonth() + Number(months.value));
         if (!Number.isNaN(date.getTime())) expiry.value = date.toISOString().slice(0, 10);
@@ -1894,7 +1909,7 @@ async function checkAlerts() {
         } else if (warranty === 'expired') {
             addAlert('Warranty expired', `${asset.name || 'Unnamed asset'} is no longer under warranty`, 'info', `warranty-expired-${asset.assetType}-${asset.id}`, { type: 'asset', apiType: asset.assetType, id: asset.id });
         }
-        if (lowStockEnabled && ASSET_TYPES[asset.assetType]?.stock && meta.stock.quantity !== '' && Number(meta.stock.quantity) <= Number(meta.stock.threshold || 5)) {
+        if (lowStockEnabled && (['CartridgeItem', 'ConsumableItem'].includes(asset.assetType) || ASSET_TYPES[asset.assetType]?.stock) && meta.stock.quantity !== '' && Number(meta.stock.quantity) <= Number(meta.stock.threshold || 5)) {
             addAlert('Low stock', `${getAssetTypeLabel(asset.assetType)} reorder threshold reached (qty: ${meta.stock.quantity || 0}, threshold: ${meta.stock.threshold || 5})`, 'warning', `lowstock-${asset.assetType}-${asset.id}`, { type: 'asset', apiType: asset.assetType, id: asset.id });
         }
     });

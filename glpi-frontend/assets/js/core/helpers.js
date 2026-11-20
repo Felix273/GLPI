@@ -3,8 +3,15 @@ function setTextIfPresent(id, value) {
     const element = document.getElementById(id);
     if (element) element.textContent = value;
 }
+let assetMetaMemoryCache = null;
 function getAllAssetMeta() {
-    try { return JSON.parse(localStorage.getItem(META_KEY) || '{}'); } catch { return {}; }
+    if (assetMetaMemoryCache) return assetMetaMemoryCache;
+    try { assetMetaMemoryCache = JSON.parse(localStorage.getItem(META_KEY) || '{}'); } catch { assetMetaMemoryCache = {}; }
+    return assetMetaMemoryCache;
+}
+function setAllAssetMetaCache(all) {
+    assetMetaMemoryCache = all && typeof all === 'object' ? all : {};
+    localStorage.setItem(META_KEY, JSON.stringify(assetMetaMemoryCache));
 }
 function getAssetKey(apiType, id) { return `${apiType}:${id}`; }
 function getAssetTypeLabel(apiType, itemOrMeta) {
@@ -34,7 +41,7 @@ async function hydrateAssetMeta(apiType, id) {
         if (!remote) return;
         const all = getAllAssetMeta();
         all[getAssetKey(apiType, id)] = remote;
-        localStorage.setItem(META_KEY, JSON.stringify(all));
+        setAllAssetMetaCache(all);
     } catch {}
 }
 function readFinancialForm() {

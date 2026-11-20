@@ -27,6 +27,7 @@ class GLPIClient {
     async detectBackend() {
         if (window.location.protocol === 'file:' || window.location.port === '5500') {
             this.backendMode = false;
+            this.backendAuthenticated = false;
             return false;
         }
 
@@ -35,9 +36,20 @@ class GLPIClient {
                 cache: 'no-store',
                 credentials: 'same-origin'
             });
-            this.backendMode = response.ok && response.headers.get('content-type')?.includes('application/json');
+            const contentType = response.headers.get('content-type') || '';
+            if (response.ok && contentType.includes('application/json')) {
+                const data = await response.json().catch(() => ({}));
+                this.backendMode = true;
+                this.backendAuthenticated = Boolean(data.authenticated);
+                this.sessionInfo = data.session || null;
+                this._lastSessionCheck = Date.now();
+                return true;
+            }
+            this.backendMode = false;
+            this.backendAuthenticated = false;
         } catch {
             this.backendMode = false;
+            this.backendAuthenticated = false;
         }
         return this.backendMode;
     }
@@ -154,6 +166,8 @@ class GLPIClient {
         if (this.backendMode) {
             const data = await this.backendRequest('/backend/session');
             if (!data.authenticated) throw new Error('Not authenticated');
+            this.backendAuthenticated = true;
+            if (data.session) this.sessionInfo = data.session;
             return this.sessionInfo || { session: null };
         }
         return await this.request('/getFullSession');
@@ -384,7 +398,7 @@ class GLPIClient {
             params.set(`criteria[${i+2}][value]`, c.value);
         });
 
-        return await this.request(`/search${itemtype}?${params}`);
+        return await this.request(`/search/${itemtype}?${params}`);
     }
 
     /**

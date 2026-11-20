@@ -49,7 +49,8 @@ async function loadUsers() {
         const assetGroups = await Promise.all(
             [...OPERATIONAL_ASSET_APIS].map(async apiType => {
                 try {
-                    const items = await glpi.getItems(apiType);
+                    const opts = apiType === 'Computer' ? { add_keys_names: ['computertypes_id'] } : {};
+                    const items = await glpi.getItems(apiType, opts);
                     return (Array.isArray(items) ? items : []).map(item => ({
                         ...item,
                         assetType: apiType
@@ -202,7 +203,7 @@ function renderUsersTable() {
 
         const types = [...new Set(
             assets.map(asset =>
-                getAssetTypeLabel(asset.assetType)
+                getAssetTypeLabel(asset.assetType, asset)
             )
         )];
 
@@ -428,7 +429,7 @@ function showUserAssetAssociationModal(title, subtitle, assets) {
 
                                     <td data-label="Type">
                                         ${escapeHtml(
-                                            getAssetTypeLabel(asset.assetType)
+                                            getAssetTypeLabel(asset.assetType, asset)
                                         )}
                                     </td>
 
