@@ -129,3 +129,10 @@ glpi-frontend/data/metadata/*.json
 glpi-frontend/data/documents/*
 !glpi-frontend/data/metadata/.gitkeep
 !glpi-frontend/data/documents/.gitkeep
+
+# ===========================
+# GLPI Live Config & Keys
+# ===========================
+glpi/config/config_db.php
+glpi/config/glpicrypt.key
+glpi/config/local_define.php
