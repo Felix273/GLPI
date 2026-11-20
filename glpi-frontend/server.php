@@ -959,21 +959,30 @@ function currentGlpiUserLabel(array $glpi): string
 function handleMetadataCollection(): void
 {
     requireGlpiSession();
-    $items = [];
+    $entries = [];
+    $types = [];
     foreach (glob(META_DIR . '/*.json') ?: [] as $file) {
         $name = pathinfo($file, PATHINFO_FILENAME);
         $position = strrpos($name, '-');
-        if ($position === false) {
-            continue;
-        }
+        if ($position === false) continue;
         $itemtype = substr($name, 0, $position);
         $id = substr($name, $position + 1);
-        if (!glpiItemIsReadable($itemtype, $id)) {
-            continue;
+        $entries[] = [$file, $itemtype, $id];
+        $types[$itemtype] = true;
+    }
+    $readableIds = [];
+    foreach (array_keys($types) as $itemtype) {
+        $readableIds[$itemtype] = [];
+        foreach (tryGlpiListAll($itemtype) as $row) {
+            if (isset($row['id'])) $readableIds[$itemtype][(string)$row['id']] = true;
         }
+    }
+    $items = [];
+    foreach ($entries as [$file, $itemtype, $id]) {
+        if (!isset($readableIds[$itemtype][(string)$id])) continue;
         $metadata = readJsonFile($file, []);
         if (isset($metadata['documents']) && is_array($metadata['documents'])) {
-            $metadata['documents'] = array_map(function (array $document): array {
+            $metadata['documents'] = array_map(static function (array $document): array {
                 unset($document['dataUrl']);
                 return $document;
             }, $metadata['documents']);
@@ -1211,10 +1220,7 @@ function handleComputerInventory(string $id): void
         jsonResponse(['error' => 'Computer not found'], 404);
     }
 
-    $agents = glpiFilterRows(
-        tryGlpiListAll('Agent'),
-        ['itemtype' => 'Computer', 'items_id' => $computerId]
-    );
+    $agents = tryGlpiSubItems('Computer', $computerId, 'Agent', ['itemtype' => 'Computer', 'items_id' => $computerId]);
 
     usort(
         $agents,
@@ -1227,51 +1233,20 @@ function handleComputerInventory(string $id): void
 
     $agent = $agents[0] ?? null;
 
-    $operatingSystemRows = glpiFilterRows(
-        tryGlpiListAll('Item_OperatingSystem'),
-        ['itemtype' => 'Computer', 'items_id' => $computerId]
-    );
+    $operatingSystemRows = tryGlpiSubItems('Computer', $computerId, 'Item_OperatingSystem', ['itemtype' => 'Computer', 'items_id' => $computerId]);
+    $diskRows = tryGlpiSubItems('Computer', $computerId, 'Item_Disk', ['itemtype' => 'Computer', 'items_id' => $computerId]);
+    $antivirusRows = tryGlpiSubItems('Computer', $computerId, 'ComputerAntivirus', ['computers_id' => $computerId]);
+    $installationRows = tryGlpiSubItems('Computer', $computerId, 'Item_SoftwareVersion', ['itemtype' => 'Computer', 'items_id' => $computerId]);
 
-    $diskRows = glpiFilterRows(
-        tryGlpiListAll('Item_Disk'),
-        ['itemtype' => 'Computer', 'items_id' => $computerId]
-    );
+    $softwareVersionMap = !empty($installationRows) ? glpiIndexById(tryGlpiListAll('SoftwareVersion')) : [];
+    $softwareMap = !empty($installationRows) ? glpiIndexById(tryGlpiListAll('Software')) : [];
+    $manufacturerMap = !empty($installationRows) ? glpiIndexById(tryGlpiListAll('Manufacturer')) : [];
 
-    $antivirusRows = glpiFilterRows(
-        tryGlpiListAll('ComputerAntivirus'),
-        ['computers_id' => $computerId]
-    );
-
-    $installationRows = glpiFilterRows(
-        tryGlpiListAll('Item_SoftwareVersion'),
-        ['itemtype' => 'Computer', 'items_id' => $computerId]
-    );
-
-    $softwareVersionMap = glpiIndexById(
-        tryGlpiListAll('SoftwareVersion')
-    );
-    $softwareMap = glpiIndexById(
-        tryGlpiListAll('Software')
-    );
-    $manufacturerMap = glpiIndexById(
-        tryGlpiListAll('Manufacturer')
-    );
-
-    $osMap = glpiIndexById(
-        tryGlpiListAll('OperatingSystem')
-    );
-    $osVersionMap = glpiIndexById(
-        tryGlpiListAll('OperatingSystemVersion')
-    );
-    $osArchitectureMap = glpiIndexById(
-        tryGlpiListAll('OperatingSystemArchitecture')
-    );
-    $osKernelMap = glpiIndexById(
-        tryGlpiListAll('OperatingSystemKernelVersion')
-    );
-    $osEditionMap = glpiIndexById(
-        tryGlpiListAll('OperatingSystemEdition')
-    );
+    $osMap = !empty($operatingSystemRows) ? glpiIndexById(tryGlpiListAll('OperatingSystem')) : [];
+    $osVersionMap = !empty($operatingSystemRows) ? glpiIndexById(tryGlpiListAll('OperatingSystemVersion')) : [];
+    $osArchitectureMap = !empty($operatingSystemRows) ? glpiIndexById(tryGlpiListAll('OperatingSystemArchitecture')) : [];
+    $osKernelMap = !empty($operatingSystemRows) ? glpiIndexById(tryGlpiListAll('OperatingSystemKernelVersion')) : [];
+    $osEditionMap = !empty($operatingSystemRows) ? glpiIndexById(tryGlpiListAll('OperatingSystemEdition')) : [];
 
     $operatingSystems = [];
 
@@ -1661,6 +1636,20 @@ function glpiListAll(
     }
 
     return $items;
+}
+
+function tryGlpiSubItems(string $itemtype, int $id, string $subItemtype, array $fallbackCriteria = []): array
+{
+    try {
+        return glpiListAll(rawurlencode($itemtype) . '/' . $id . '/' . rawurlencode($subItemtype));
+    } catch (GlpiApiException $e) {
+        if ($fallbackCriteria && in_array($e->httpStatus, [400, 404], true)) {
+            return glpiFilterRows(tryGlpiListAll($subItemtype), $fallbackCriteria);
+        }
+        return [];
+    } catch (Throwable) {
+        return [];
+    }
 }
 
 function tryGlpiListAll(
