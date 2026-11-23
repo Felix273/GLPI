@@ -136,3 +136,4 @@ glpi-frontend/data/documents/*
 glpi/config/config_db.php
 glpi/config/glpicrypt.key
 glpi/config/local_define.php
+glpi-frontend/data/email-log.json
