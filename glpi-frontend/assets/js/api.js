@@ -286,6 +286,18 @@ class GLPIClient {
         });
     }
 
+    async testEmail(to, email) {
+        if (!this.backendMode) return null;
+        return await this.backendRequest('/backend/settings/email/test', { method: 'POST', body: JSON.stringify({ to, email }), timeout: 30000 });
+    }
+    async getEmailLog() {
+        if (!this.backendMode) return null;
+        return await this.backendRequest('/backend/settings/email/log');
+    }
+    async sendAssetNotification(payload) {
+        if (!this.backendMode) return null;
+        return await this.backendRequest('/backend/notifications/asset-event', { method: 'POST', body: JSON.stringify(payload), timeout: 30000 });
+    }
     async syncDirectory(directory, mode = 'all') {
         if (!this.backendMode) return null;
         return await this.backendRequest('/backend/settings/directory/sync', {

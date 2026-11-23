@@ -6,5 +6,8 @@
     },
     "autoload": {
         "files": ["lib/functions.php"]
+    },
+    "require": {
+        "phpmailer/phpmailer": "^7.2"
     }
 }

@@ -25,6 +25,7 @@ const DEFAULT_SETTINGS_FILE = DATA_DIR . '/settings.json';
 const DEFAULT_LOGO_DIR = DATA_DIR . '/branding';
 
 require_once __DIR__ . '/lib/functions.php';
+require_once __DIR__ . '/lib/mailer.php';
 
 $trustedOrigins = array_filter(array_map('trim', explode(',', (string) getenv('TRUSTED_ORIGINS'))));
 if (!$trustedOrigins) {
@@ -98,6 +99,12 @@ function handleBackend(string $route, string $method): void
             handleDirectoryPreview();
         } elseif ($route === 'settings/directory/sync' && $method === 'POST') {
             handleDirectorySync();
+        } elseif ($route === 'settings/email/test' && $method === 'POST') {
+            handleEmailTest();
+        } elseif ($route === 'settings/email/log' && $method === 'GET') {
+            handleEmailLog();
+        } elseif ($route === 'notifications/asset-event' && $method === 'POST') {
+            handleAssetEmailNotification();
         } elseif ($route === 'metadata' && $method === 'GET') {
             handleMetadataCollection();
         } elseif (str_starts_with($route, 'metadata/')) {
@@ -258,6 +265,9 @@ function adminSettingsPayload(array $settings): array
     $encrypted = (string)($payload['directory']['bindPasswordEncrypted'] ?? '');
     unset($payload['directory']['bindPasswordEncrypted']);
     $payload['directory']['hasBindPassword'] = $encrypted !== '';
+    $emailEnc = (string)($payload['email']['passwordEncrypted'] ?? '');
+    unset($payload['email']['passwordEncrypted']);
+    $payload['email']['hasPassword'] = $emailEnc !== '';
     return $payload;
 }
 
@@ -356,6 +366,17 @@ function handleSettings(string $method): void
         $settings['directory']['bindPasswordEncrypted'] = encryptSetting($newPassword);
     }
 
+    $emailBody = is_array($body['email'] ?? null) ? $body['email'] : [];
+    if ($emailBody) {
+        foreach (['host', 'encryption', 'username', 'fromAddress', 'fromName', 'replyTo', 'ccAdminEmail'] as $ef) {
+            if (array_key_exists($ef, $emailBody)) $settings['email'][$ef] = trim((string)$emailBody[$ef]);
+        }
+        if (array_key_exists('enabled', $emailBody)) $settings['email']['enabled'] = !empty($emailBody['enabled']);
+        if (array_key_exists('notifyOnAssign', $emailBody)) $settings['email']['notifyOnAssign'] = !empty($emailBody['notifyOnAssign']);
+        if (array_key_exists('notifyOnReturn', $emailBody)) $settings['email']['notifyOnReturn'] = !empty($emailBody['notifyOnReturn']);
+        if (array_key_exists('port', $emailBody)) $settings['email']['port'] = max(1, min(65535, (int)$emailBody['port']));
+        if ((string)($emailBody['password'] ?? '') !== '') $settings['email']['passwordEncrypted'] = encryptSetting((string)$emailBody['password']);
+    }
     $settings['audit']['updatedAt'] = date(DATE_ATOM);
     $settings['audit']['updatedBy'] = currentGlpiUserLabel($glpi);
     saveSettings($settings);

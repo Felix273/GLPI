@@ -988,7 +988,15 @@ async function handleAssignUser(event) {
             await saveAssetMeta(target.apiType, target.id, { assignments });
             await appendAssetActivity(target.apiType, target.id, { type: 'assigned', title: `Assigned to ${userName}`, description: notes || (dueDate ? `Expected return ${formatDate(dueDate)}` : '') });
         }));
-        showToast(`${targets.length} asset${targets.length === 1 ? '' : 's'} assigned to ${userName}.`, 'success');
+        const mailAssets = targets.map(tg => {
+            const found = state.assets.find(a => Number(a.id) === Number(tg.id) && a.assetType === tg.apiType)
+                || state.dashboardAssets.find(a => Number(a.id) === Number(tg.id) && a.assetType === tg.apiType)
+                || (state.viewedAsset && Number(state.viewedAsset.id) === Number(tg.id) ? state.viewedAsset.item : null) || {};
+            return { name: found.name || `Asset #${tg.id}`, type: getAssetTypeLabel(tg.apiType, found), tag: found.otherserial || '-', serial: found.serial || '-', status: 'Assigned' };
+        });
+        const mailRes = await glpi.sendAssetNotification({ event: 'assigned', userId, assets: mailAssets, assignedAt, dueDate, notes }).catch(() => null);
+        const mailNote = mailRes?.sent ? ` (email sent to ${mailRes.to})` : (mailRes?.error ? ' (email failed — check SMTP log)' : '');
+        showToast(`${targets.length} asset${targets.length === 1 ? '' : 's'} assigned to ${userName}${mailNote}.`, 'success');
         closeModal('assignModal');
         state.selectedAssets.clear();
         if (state.currentView === 'dashboard') await loadDashboard();
@@ -1009,13 +1017,17 @@ async function unassignViewedAsset() {
         confirmLabel: 'Return asset',
         danger: false,
         onConfirm: async () => {
-            const { apiType, id } = state.viewedAsset;
-            await glpi.updateItem(apiType, id, { users_id: 0, states_id: 0 });
+            const { apiType, id, item } = state.viewedAsset;
             const meta = getAssetMeta(apiType, id);
+            const prevUserId = getAssetUserId(item) || Number(meta.assignments.find(r => r.active)?.userId || 0);
+            await glpi.updateItem(apiType, id, { users_id: 0, states_id: 0 });
             const returnedAt = new Date().toISOString();
             const assignments = meta.assignments.map((record, index) => index === 0 && record.active ? { ...record, active: false, returnedAt } : record);
             await saveAssetMeta(apiType, id, { assignments });
             await appendAssetActivity(apiType, id, { type: 'unassigned', title: 'Returned to available inventory', description: 'The user assignment was removed.' });
+            if (prevUserId > 0) {
+                await glpi.sendAssetNotification({ event: 'returned', userId: prevUserId, assignedAt: returnedAt.slice(0, 10), assets: [{ name: item?.name || `Asset #${id}`, type: getAssetTypeLabel(apiType, item), tag: item?.otherserial || '-', serial: item?.serial || '-', status: 'Returned' }] }).catch(() => null);
+            }
             showToast('Asset returned to inventory.', 'success');
             await viewAsset(apiType, id);
         }

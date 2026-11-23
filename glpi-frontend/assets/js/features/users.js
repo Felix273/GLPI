@@ -63,6 +63,7 @@ async function loadUsers() {
         );
 
         const assets = assetGroups.flat();
+        state.allOperationalAssets = assets;
         const lookup = buildUserAssociationLookup(state.users);
 
         state.userAssetMap = new Map(
@@ -289,6 +290,14 @@ function renderUsersTable() {
                         <i class="fas fa-boxes-stacked"></i>
                         View assets
                     </button>
+                    <button
+                        class="btn-secondary btn-sm"
+                        onclick="openExitClearanceModal(${Number(user.id)})"
+                        title="Print or email staff exit clearance form"
+                    >
+                        <i class="fas fa-file-signature"></i>
+                        Exit clearance
+                    </button>
                 </td>
             </tr>
         `;
@@ -509,4 +518,55 @@ window.showCreateUserModal = function() {
         'Create users in native GLPI, then refresh this directory.',
         'info'
     );
+};
+
+function buildExitClearanceRows(userId) {
+    const uid = Number(userId);
+    const currentAssets = state.userAssetMap?.get(uid) || [];
+    const currentKeys = new Set(currentAssets.map(a => `${a.assetType}:${a.id}`));
+    const rows = currentAssets.map(asset => {
+        const meta = getAssetMeta(asset.assetType, asset.id);
+        const rec = meta.assignments.find(r => Number(r.userId) === uid && r.active) || meta.assignments[0] || {};
+        return { name: asset.name || 'Unnamed', type: getAssetTypeLabel(asset.assetType, asset), tag: asset.otherserial || '-', serial: asset.serial || '-', assignedAt: rec.assignedAt || asset.date_mod || '', returnedAt: '', status: 'Pending Handover', handedBack: false };
+    });
+    Object.entries(getAllAssetMeta()).forEach(([key, meta]) => {
+        if (currentKeys.has(key) || !Array.isArray(meta?.assignments)) return;
+        const returned = meta.assignments.find(r => Number(r.userId) === uid && !r.active && r.returnedAt);
+        if (!returned) return;
+        const [apiType, id] = key.split(':');
+        const found = (state.allOperationalAssets || []).find(a => a.assetType === apiType && Number(a.id) === Number(id)) || {};
+        rows.push({ name: found.name || `${apiType} #${id}`, type: getAssetTypeLabel(apiType, found), tag: found.otherserial || meta.importSource?.assetTag || '-', serial: found.serial || '-', assignedAt: returned.assignedAt || '', returnedAt: returned.returnedAt, status: 'Handed Back', handedBack: true });
+    });
+    return rows;
+}
+
+window.openExitClearanceModal = function(userId) {
+    const uid = Number(userId);
+    const user = state.users.find(u => Number(u.id) === uid) || {};
+    const name = user.id ? getUserDisplayName(uid) : `User #${uid}`;
+    const rows = buildExitClearanceRows(uid);
+    const pendingCount = rows.filter(r => !r.handedBack).length;
+    const org = state.systemSettings?.organization?.name || 'GLPI Asset Hub';
+    const logoUrl = state.systemSettings?.organization?.logoUrl || '';
+    let modal = document.getElementById('exitClearanceModal');
+    if (!modal) { modal = document.createElement('div'); modal.id = 'exitClearanceModal'; modal.className = 'modal'; document.body.appendChild(modal); }
+    const tableRows = rows.length ? rows.map(r => `<tr><td><strong>${escapeHtml(r.name)}</strong></td><td>${escapeHtml(r.type)}</td><td>${escapeHtml(r.tag)} / ${escapeHtml(r.serial)}</td><td>${escapeHtml(formatDate(r.assignedAt))}</td><td>${r.returnedAt ? escapeHtml(formatDate(r.returnedAt)) : '-'}</td><td><span class="status-badge ${r.handedBack ? 'available' : 'maintenance'}">${escapeHtml(r.status)}</span></td></tr>`).join('') : '<tr><td colspan="6" style="text-align:center;padding:16px">No equipment assigned or recorded for this officer.</td></tr>';
+    modal.innerHTML = `<div class="modal-content modal-large"><div class="modal-header no-print"><div><span class="eyebrow">Staff exit clearance</span><h2>${escapeHtml(name)}</h2></div><button class="modal-close" onclick="closeModal('exitClearanceModal')"><i class="fas fa-times"></i></button></div><div class="modal-body" id="exitClearancePrintArea"><div class="clearance-header">${logoUrl ? `<img src="${escapeAttribute(logoUrl)}" alt="Logo" class="clearance-logo">` : ''}<div><h2>${escapeHtml(org)} — Officer Exit Equipment Clearance</h2><p>Generated ${escapeHtml(new Date().toLocaleString())} by ${escapeHtml(state.user?.name || 'Asset Administrator')}</p></div></div><div class="clearance-officer-box"><div><strong>Officer:</strong> ${escapeHtml(name)}</div><div><strong>Login:</strong> ${escapeHtml(user.name || user.login || '-')}</div><div><strong>Email:</strong> ${escapeHtml(getUserEmail(user))}</div><div><strong>Clearance Status:</strong> <span class="status-badge ${pendingCount === 0 ? 'available' : 'maintenance'}">${pendingCount === 0 ? 'CLEARED (All assets returned)' : `PENDING (${pendingCount} asset${pendingCount === 1 ? '' : 's'} not yet returned)`}</span></div></div><div class="table-container"><table class="data-table"><thead><tr><th>Asset</th><th>Type</th><th>Tag / Serial</th><th>Assigned</th><th>Handed Back</th><th>Status</th></tr></thead><tbody>${tableRows}</tbody></table></div><div class="clearance-signatures"><div><span>Exiting Officer Signature &amp; Date</span></div><div><span>IT / Asset Manager Signature &amp; Date</span></div><div><span>Supervisor / HR Signature &amp; Date</span></div></div></div><div class="form-actions no-print"><button type="button" class="btn-secondary" onclick="closeModal('exitClearanceModal')">Close</button><button type="button" class="btn-secondary" onclick="emailExitClearanceSummary(${uid})"><i class="fas fa-envelope"></i> Email officer</button><button type="button" class="btn-primary" onclick="printExitClearanceForm()"><i class="fas fa-print"></i> Print clearance form</button></div></div>`;
+    showModal('exitClearanceModal');
+};
+
+window.printExitClearanceForm = function() {
+    document.body.classList.add('printing-clearance');
+    window.print();
+    setTimeout(() => document.body.classList.remove('printing-clearance'), 500);
+};
+
+window.emailExitClearanceSummary = async function(userId) {
+    const rows = buildExitClearanceRows(userId);
+    if (!rows.length) return showToast('No equipment records to email for this officer.', 'warning');
+    try {
+        const res = await glpi.sendAssetNotification({ event: 'clearance', userId: Number(userId), assets: rows.map(r => ({ name: r.name, type: r.type, tag: r.tag, serial: r.serial, status: r.status })) });
+        if (res?.sent) showToast(`Clearance summary emailed to ${res.to}`, 'success');
+        else showToast(res?.reason || res?.error || 'Email not sent — check SMTP settings', 'warning');
+    } catch (err) { showToast(err.message || 'Unable to send email', 'error'); }
 };

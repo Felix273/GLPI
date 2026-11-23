@@ -290,3 +290,14 @@
         display: none;
     }
 }
+.clearance-header { display: flex; align-items: center; gap: 14px; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 14px; }
+.clearance-logo { max-height: 44px; max-width: 120px; object-fit: contain; }
+.clearance-officer-box { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; background: var(--bg-secondary, #f8fafc); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
+.clearance-signatures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 36px; padding-top: 12px; }
+.clearance-signatures div { border-top: 1px solid #64748b; padding-top: 6px; font-size: 12px; color: #475569; text-align: center; }
+@media print {
+    body.printing-clearance > *:not(#exitClearanceModal) { display: none !important; }
+    body.printing-clearance #exitClearanceModal { position: static !important; display: block !important; background: #fff !important; padding: 0 !important; }
+    body.printing-clearance #exitClearanceModal .modal-content { box-shadow: none !important; border: none !important; width: 100% !important; max-width: 100% !important; }
+    body.printing-clearance #exitClearanceModal .no-print { display: none !important; }
+}

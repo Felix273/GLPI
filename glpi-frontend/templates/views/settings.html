@@ -45,6 +45,10 @@
                                 <i class="fas fa-address-book"></i>
                                 <span><strong>Active Directory</strong><small>LDAP and user sync</small></span>
                             </button>
+                            <button class="settings-tab" data-settings-tab="email" onclick="switchSettingsTab('email')">
+                                <i class="fas fa-envelope"></i>
+                                <span><strong>Email / SMTP</strong><small>Notifications and mail</small></span>
+                            </button>
                             <button class="settings-tab" data-settings-tab="sync" onclick="switchSettingsTab('sync')">
                                 <i class="fas fa-arrows-rotate"></i>
                                 <span><strong>Synchronization</strong><small>Status and actions</small></span>
@@ -337,6 +341,33 @@
                                 </div>
                             </section>
 
+                            <section class="settings-panel" data-settings-panel="email">
+                                <div class="settings-section-heading">
+                                    <div><span class="eyebrow">SMTP Notifications</span><h2>Email &amp; SMTP settings</h2><p>Send assignment, return, and exit clearance notifications to officers.</p></div>
+                                    <label class="settings-switch"><input id="emailEnabled" type="checkbox"><span></span><strong>Enable SMTP</strong></label>
+                                </div>
+                                <div class="settings-form-grid">
+                                    <label class="settings-field"><span>SMTP host</span><input class="form-control" id="emailHost" type="text" placeholder="smtp.office365.com"></label>
+                                    <label class="settings-field"><span>Port</span><input class="form-control" id="emailPort" type="number" min="1" max="65535" value="587"></label>
+                                    <label class="settings-field"><span>Encryption</span><select class="form-control" id="emailEncryption"><option value="tls">STARTTLS (587)</option><option value="ssl">SSL / TLS (465)</option><option value="none">None (25)</option></select></label>
+                                    <label class="settings-field"><span>SMTP username</span><input class="form-control" id="emailUsername" type="text" autocomplete="username" placeholder="assets@example.org"></label>
+                                    <label class="settings-field settings-field-wide"><span>SMTP password</span><div class="password-field"><input class="form-control" id="emailPassword" type="password" autocomplete="new-password" placeholder="Leave blank to keep stored password"><button type="button" class="btn-icon" onclick="toggleEmailPassword()"><i class="fas fa-eye"></i></button></div><small id="emailPasswordStatus" class="settings-field-note">No password stored</small></label>
+                                    <label class="settings-field"><span>From email</span><input class="form-control" id="emailFromAddress" type="email" placeholder="assets@example.org"></label>
+                                    <label class="settings-field"><span>From name</span><input class="form-control" id="emailFromName" type="text" value="GLPI Asset Hub"></label>
+                                    <label class="settings-field"><span>Reply-To email (optional)</span><input class="form-control" id="emailReplyTo" type="email" placeholder="ict-helpdesk@example.org"></label>
+                                    <label class="settings-field"><span>CC admin / HR email (optional)</span><input class="form-control" id="emailCcAdmin" type="email" placeholder="asset-manager@example.org"></label>
+                                    <div class="settings-field settings-toggle-field"><label class="settings-switch"><input id="emailNotifyOnAssign" type="checkbox" checked><span></span><strong>Email officer on assignment</strong></label><small>Automatically email the officer when an asset is assigned.</small></div>
+                                    <div class="settings-field settings-toggle-field"><label class="settings-switch"><input id="emailNotifyOnReturn" type="checkbox" checked><span></span><strong>Email officer on return</strong></label><small>Send handover confirmation when an asset is returned.</small></div>
+                                </div>
+                                <div class="settings-action-bar">
+                                    <div style="display:flex;gap:8px;align-items:center;flex:1;max-width:420px"><input class="form-control" id="emailTestRecipient" type="email" placeholder="recipient@example.org"><button type="button" class="btn-secondary" id="testEmailBtn" onclick="sendTestEmail()"><i class="fas fa-paper-plane"></i> Send test</button></div>
+                                    <div id="emailTestStatus" class="directory-status neutral"><i class="fas fa-circle"></i><span>SMTP has not been tested.</span></div>
+                                </div>
+                                <div class="settings-subsection">
+                                    <div class="settings-subsection-heading"><div><h3>Recent email delivery log</h3><p>Latest 100 outgoing notifications and test emails.</p></div><button type="button" class="btn-secondary btn-sm" onclick="loadEmailLog()"><i class="fas fa-rotate"></i> Refresh log</button></div>
+                                    <div class="table-container"><table class="data-table"><thead><tr><th>When</th><th>Event</th><th>Recipient</th><th>Subject</th><th>Status</th></tr></thead><tbody id="emailLogBody"><tr><td colspan="5"><div class="empty-state compact"><p>Open this tab or click Refresh log.</p></div></td></tr></tbody></table></div>
+                                </div>
+                            </section>
                             <section class="settings-panel" data-settings-panel="sync">
                                 <div class="settings-section-heading">
                                     <div>
