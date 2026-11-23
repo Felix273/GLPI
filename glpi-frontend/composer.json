@@ -4,9 +4,6 @@
     "require-dev": {
         "phpunit/phpunit": "^10.0"
     },
-    "autoload": {
-        "files": ["lib/functions.php"]
-    },
     "require": {
         "phpmailer/phpmailer": "^7.2"
     }
