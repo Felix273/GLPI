@@ -309,7 +309,6 @@ function switchSettingsTab(tab) {
   });
   if (tab === "logs") loadSettingsLogs();
   if (tab === "email") loadEmailLog();
-  if (tab === "email") loadEmailLog();
   if (tab === "access") loadSettingsAccess();
 }
 window.switchSettingsTab = switchSettingsTab;
@@ -457,26 +456,6 @@ function populateSettingsForm(settings) {
     preview.innerHTML = `<img src="${escapeAttribute(organization.logoUrl)}" alt="${escapeAttribute(organization.name || "Organization")} logo">`;
   }
 
-  const em = settings.email || {};
-  setInputChecked("emailEnabled", em.enabled);
-  setInputValue("emailHost", em.host || "");
-  setInputValue("emailPort", em.port || 587);
-  setInputValue("emailEncryption", em.encryption || "tls");
-  setInputValue("emailUsername", em.username || "");
-  setInputValue("emailPassword", "");
-  setInputValue("emailFromAddress", em.fromAddress || "");
-  setInputValue("emailFromName", em.fromName || "GLPI Asset Hub");
-  setInputValue("emailReplyTo", em.replyTo || "");
-  setInputValue("emailCcAdmin", em.ccAdminEmail || "");
-  setInputChecked("emailNotifyOnAssign", em.notifyOnAssign ?? true);
-  setInputChecked("emailNotifyOnReturn", em.notifyOnReturn ?? true);
-  const eps = document.getElementById("emailPasswordStatus");
-  if (eps) eps.textContent = em.hasPassword ? "An SMTP password is securely stored" : "No password stored";
-  const ets = document.getElementById("emailTestStatus");
-  if (ets && em.lastTestStatus) {
-    ets.className = `directory-status ${em.lastTestStatus === "success" ? "success" : "error"}`;
-    ets.innerHTML = `<i class="fas ${em.lastTestStatus === "success" ? "fa-circle-check" : "fa-circle-xmark"}"></i><span>${escapeHtml(em.lastTestStatus === "success" ? `Tested ${formatSettingsDate(em.lastTestAt)}` : (em.lastTestError || "Last test failed"))}</span>`;
-  }
   const em = settings.email || {};
   setInputChecked("emailEnabled", em.enabled);
   setInputValue("emailHost", em.host || "");
@@ -812,7 +791,6 @@ function collectSystemSettings() {
         document.getElementById("settingsLowStockAlerts")?.checked ?? true,
     },
     directory: collectDirectorySettings(),
-    email: collectEmailSettings(),
     email: collectEmailSettings(),
   };
   settings.sidebar = collectSidebarSettings();
@@ -1421,49 +1399,3 @@ window.loadEmailLog = async function() {
   } catch {}
 };
 
-function collectEmailSettings() {
-  return {
-    enabled: Boolean(document.getElementById("emailEnabled")?.checked),
-    host: document.getElementById("emailHost")?.value.trim() || "",
-    port: Number(document.getElementById("emailPort")?.value || 587),
-    encryption: document.getElementById("emailEncryption")?.value || "tls",
-    username: document.getElementById("emailUsername")?.value.trim() || "",
-    password: document.getElementById("emailPassword")?.value || "",
-    fromAddress: document.getElementById("emailFromAddress")?.value.trim() || "",
-    fromName: document.getElementById("emailFromName")?.value.trim() || "GLPI Asset Hub",
-    replyTo: document.getElementById("emailReplyTo")?.value.trim() || "",
-    ccAdminEmail: document.getElementById("emailCcAdmin")?.value.trim() || "",
-    notifyOnAssign: Boolean(document.getElementById("emailNotifyOnAssign")?.checked),
-    notifyOnReturn: Boolean(document.getElementById("emailNotifyOnReturn")?.checked),
-  };
-}
-window.toggleEmailPassword = function() {
-  const el = document.getElementById("emailPassword");
-  if (el) el.type = el.type === "password" ? "text" : "password";
-};
-window.sendTestEmail = async function() {
-  const to = document.getElementById("emailTestRecipient")?.value.trim() || "";
-  if (!to) return showToast("Enter a recipient email address first", "warning");
-  const btn = document.getElementById("testEmailBtn");
-  const status = document.getElementById("emailTestStatus");
-  if (btn) btn.disabled = true;
-  if (status) { status.className = "directory-status testing"; status.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i><span>Sending test email...</span>'; }
-  try {
-    const res = await glpi.testEmail(to, collectEmailSettings());
-    if (status) { status.className = "directory-status success"; status.innerHTML = `<i class="fas fa-circle-check"></i><span>${escapeHtml(res.message || "Test sent")}</span>`; }
-    showToast(res.message || "Test email sent", "success");
-    loadEmailLog();
-  } catch (err) {
-    if (status) { status.className = "directory-status error"; status.innerHTML = `<i class="fas fa-circle-xmark"></i><span>${escapeHtml(err.message)}</span>`; }
-    showToast(err.message || "SMTP test failed", "error");
-  } finally { if (btn) btn.disabled = false; }
-};
-window.loadEmailLog = async function() {
-  const body = document.getElementById("emailLogBody");
-  if (!body) return;
-  try {
-    const res = await glpi.getEmailLog();
-    const rows = Array.isArray(res?.entries) ? res.entries : [];
-    body.innerHTML = rows.length ? rows.map(r => `<tr><td>${escapeHtml(settingsDisplayDate(r.sentAt))}</td><td>${escapeHtml(r.event || "-")}</td><td>${escapeHtml(r.to || "-")}</td><td>${escapeHtml(r.subject || "-")}</td><td><span class="status-badge ${r.status === "sent" ? "available" : "inactive"}">${escapeHtml(r.status || "-")}</span>${r.error ? `<small style="display:block;color:#dc2626">${escapeHtml(r.error)}</small>` : ""}</td></tr>`).join("") : '<tr><td colspan="5"><div class="empty-state compact"><p>No emails sent yet.</p></div></td></tr>';
-  } catch {}
-};
