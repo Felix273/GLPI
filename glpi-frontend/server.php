@@ -532,8 +532,14 @@ function handleDirectorySync(): void
         }
     }
 
+    $userEmailsByUser = [];
+    foreach (tryGlpiListAll('UserEmail') as $ue) {
+        $uid = (int)($ue['users_id'] ?? 0);
+        if ($uid > 0) $userEmailsByUser[$uid][] = $ue;
+    }
     $created = 0;
     $updated = 0;
+    $emailsSynced = 0;
     $skipped = 0;
     $errors = [];
 
@@ -588,13 +594,18 @@ function handleDirectorySync(): void
                     $glpi['session_token'],
                     $glpi['app_token']
                 );
+                $targetUserId = (int)$existing['id'];
                 $updated++;
             } else {
-                $userId = glpiCreate($glpi, 'User', $fields);
-                if (!$userId) {
+                $targetUserId = glpiCreate($glpi, 'User', $fields);
+                if (!$targetUserId) {
                     throw new RuntimeException('GLPI did not return a new user ID');
                 }
                 $created++;
+            }
+            $adEmail = trim((string)($directoryUser['email'] ?? ''));
+            if ($adEmail !== '' && syncGlpiUserEmail($glpi, $targetUserId, $adEmail, $userEmailsByUser[$targetUserId] ?? [])) {
+                $emailsSynced++;
             }
         } catch (Throwable $error) {
             $errors[] = [
@@ -610,6 +621,7 @@ function handleDirectorySync(): void
         'directoryUsers' => count($directoryUsers),
         'created' => $created,
         'updated' => $updated,
+        'emailsSynced' => $emailsSynced,
         'skipped' => $skipped,
         'errors' => count($errors),
     ];
@@ -631,6 +643,30 @@ function handleDirectorySync(): void
         'syncedAt' => $settings['directory']['lastSyncAt'],
         'settings' => adminSettingsPayload($settings),
     ]);
+}
+
+function syncGlpiUserEmail(array $glpi, int $userId, string $email, array $existingEmails): bool
+{
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return false;
+    $target = null;
+    foreach ($existingEmails as $row) {
+        if (strcasecmp(trim((string)($row['email'] ?? '')), $email) === 0) {
+            if ((int)($row['is_default'] ?? 0) === 1) return false;
+            $target = $row;
+            break;
+        }
+    }
+    if (!$target) {
+        foreach ($existingEmails as $row) {
+            if ((int)($row['is_dynamic'] ?? 0) === 1 || (int)($row['is_default'] ?? 0) === 1) { $target = $row; break; }
+        }
+    }
+    if ($target && !empty($target['id'])) {
+        $eid = (int)$target['id'];
+        glpiHttp($glpi['url'], '/UserEmail/' . $eid, 'PUT', ['input' => ['id' => $eid, 'users_id' => $userId, 'email' => $email, 'is_default' => 1, 'is_dynamic' => 1]], $glpi['user_token'], $glpi['session_token'], $glpi['app_token']);
+        return true;
+    }
+    return glpiCreate($glpi, 'UserEmail', ['users_id' => $userId, 'email' => $email, 'is_default' => 1, 'is_dynamic' => 1]) !== null;
 }
 
 function ensureGlpiAuthLdap(array $glpi, array $configuration): int
@@ -820,6 +856,8 @@ function directoryUsers(array $configuration, int $limit): array
         (string)$configuration['mobileField'],
         (string)$configuration['titleField'],
         (string)$configuration['departmentField'],
+        'proxyaddresses',
+        'userprincipalname',
         'distinguishedname',
     ])));
 
@@ -854,7 +892,7 @@ function directoryUsers(array $configuration, int $limit): array
         $users[] = [
             'login' => $login,
             'syncValue' => $syncValue,
-            'email' => directoryAttribute($entry, (string)$configuration['emailField']),
+            'email' => directoryEmail($entry, (string)$configuration['emailField']),
             'firstName' => directoryAttribute($entry, (string)$configuration['firstNameField']),
             'surname' => directoryAttribute($entry, (string)$configuration['surnameField']),
             'phone' => directoryAttribute($entry, (string)$configuration['phoneField']),
@@ -867,6 +905,31 @@ function directoryUsers(array $configuration, int $limit): array
 
     ldap_unbind($connection);
     return $users;
+}
+
+function directoryEmail(array $entry, string $field): string
+{
+    $primary = directoryAttribute($entry, $field);
+    if ($primary !== '' && filter_var($primary, FILTER_VALIDATE_EMAIL)) return $primary;
+    $proxies = $entry['proxyaddresses'] ?? [];
+    if (is_array($proxies)) {
+        for ($i = 0; $i < (int)($proxies['count'] ?? 0); $i++) {
+            $raw = trim((string)($proxies[$i] ?? ''));
+            if (str_starts_with($raw, 'SMTP:')) {
+                $cand = trim(substr($raw, 5));
+                if (filter_var($cand, FILTER_VALIDATE_EMAIL)) return $cand;
+            }
+        }
+        for ($i = 0; $i < (int)($proxies['count'] ?? 0); $i++) {
+            $raw = trim((string)($proxies[$i] ?? ''));
+            if (stripos($raw, 'smtp:') === 0) {
+                $cand = trim(substr($raw, 5));
+                if (filter_var($cand, FILTER_VALIDATE_EMAIL)) return $cand;
+            }
+        }
+    }
+    $upn = directoryAttribute($entry, 'userprincipalname');
+    return ($upn !== '' && filter_var($upn, FILTER_VALIDATE_EMAIL)) ? $upn : '';
 }
 
 function directoryAttribute(array $entry, string $field, bool $binarySafe = false): string

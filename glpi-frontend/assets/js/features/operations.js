@@ -733,8 +733,18 @@ function renderInlineError(message, retryExpression = '') {
 async function ensureUsersLoaded(force = false) {
     if (state.users.length && !force) return state.users;
     try {
-        const users = await glpi.getItems('User');
-        state.users = Array.isArray(users) ? users : [];
+        const [users, userEmails] = await Promise.all([
+            glpi.getItems('User', { range: '0-5000' }),
+            glpi.getItems('UserEmail', { range: '0-10000' }).catch(() => [])
+        ]);
+        const emailByUser = new Map();
+        (Array.isArray(userEmails) ? userEmails : []).forEach(row => {
+            const uid = Number(row?.users_id || 0);
+            const addr = String(row?.email || '').trim();
+            if (!uid || !addr) return;
+            if (!emailByUser.has(uid) || Number(row.is_default) === 1) emailByUser.set(uid, addr);
+        });
+        state.users = (Array.isArray(users) ? users : []).map(u => ({ ...u, email: u.email || u.usermail || emailByUser.get(Number(u.id)) || '' }));
     } catch (error) {
         console.warn('Unable to load users:', error);
         state.users = [];

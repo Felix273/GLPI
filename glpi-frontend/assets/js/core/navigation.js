@@ -949,8 +949,10 @@ async function loadSettingsAccess(force = false) {
   }
   body.innerHTML = '<tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr>';
   try {
-    const [users, profiles] = await Promise.all([glpi.getItems("User", { range: "0-1000", is_active: 1 }), glpi.getItems("Profile", { range: "0-100" })]);
-    settingsAccessUsers = Array.isArray(users) ? users : [];
+    const [users, profiles, userEmails] = await Promise.all([glpi.getItems("User", { range: "0-5000", is_active: 1 }), glpi.getItems("Profile", { range: "0-100" }), glpi.getItems("UserEmail", { range: "0-10000" }).catch(() => [])]);
+    const emailByUser = new Map();
+    (Array.isArray(userEmails) ? userEmails : []).forEach(r => { const uid = Number(r?.users_id || 0), addr = String(r?.email || "").trim(); if (uid && addr && (!emailByUser.has(uid) || Number(r.is_default) === 1)) emailByUser.set(uid, addr); });
+    settingsAccessUsers = (Array.isArray(users) ? users : []).map(u => ({ ...u, email: u.email || u.usermail || emailByUser.get(Number(u.id)) || "" }));
     settingsAccessProfiles = Array.isArray(profiles) ? profiles : [];
     filterSettingsAccess();
     setSettingsInlineStatus("settingsAccessStatus", `${settingsAccessUsers.length} user${settingsAccessUsers.length === 1 ? "" : "s"} loaded`, "success");
@@ -1169,6 +1171,7 @@ async function syncDirectoryUsers(mode = "all") {
       `Directory users found: ${summary.directoryUsers || 0}`,
       `Created in GLPI: ${summary.created || 0}`,
       `Updated in GLPI: ${summary.updated || 0}`,
+      `Emails synced in GLPI: ${summary.emailsSynced || 0}`,
       `Skipped: ${summary.skipped || 0}`,
       `Errors: ${summary.errors || 0}`,
       `GLPI AuthLDAP ID: ${result.authLdapId || "Not returned"}`,
