@@ -570,3 +570,15 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 .stat-card { appearance: none; text-align: left; }
 button:disabled { cursor: not-allowed; opacity: .62; transform: none !important; box-shadow: none !important; }
+
+.modal-xl { max-width: min(1240px, 95vw); width: 95vw; }
+.modal-xl .modal-body { max-height: 75vh; overflow-y: auto; }
+.maintenance-browser-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.maintenance-browser-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex: 1; }
+.maintenance-browser-filters input, .maintenance-browser-filters select { min-height: 36px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-subtle); color: var(--text-primary); font-size: 12px; }
+.maintenance-browser-filters input { min-width: 220px; flex: 1; max-width: 320px; }
+.maintenance-summary-pills { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+.maintenance-summary-pills span { padding: 5px 10px; border-radius: 999px; background: var(--bg-subtle); border: 1px solid var(--border); font-weight: 600; }
+.maintenance-status-select { min-width: 145px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-subtle); color: var(--text-primary); font-size: 12px; font-weight: 600; cursor: pointer; }
+.maintenance-status-select.is-maintained { border-color: #10b981; color: #059669; }
+.maintenance-status-select.is-not-maintained { border-color: #f59e0b; color: #d97706; }
