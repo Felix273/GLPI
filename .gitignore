@@ -53,6 +53,7 @@ pnpm-debug.log*
 # ===========================
 dist/
 build/
+glpi/css_compiled/
 
 # ===========================
 # IDE
