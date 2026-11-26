@@ -48,6 +48,8 @@ function refreshSearchableSelect(select) {
 
 function initializeSearchableSelect(select) {
     if (!(select instanceof HTMLSelectElement) || searchableSelects.has(select)) return;
+    if (select.hasAttribute('data-no-search')) return;
+    if (select.hasAttribute('data-no-search')) return;
     if (!select.matches('[data-searchable]') && select.options.length < 8) return;
 
     const input = document.createElement('input');

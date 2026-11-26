@@ -2026,72 +2026,74 @@ function renderFinancialTab(financial) {
     `;
 }
 
+function getMaintenanceBrowserTypeOptions(allOperational) {
+    return [...new Set(allOperational.map(a => getAssetTypeLabel(a.assetType, a)).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+}
+
 function renderMaintenanceBrowserModal() {
     const body = document.getElementById('dashboardAssetsBody');
     if (!body) return;
+    state.maintBrowserPage = 1;
+    state.maintBrowserPageSize = state.maintBrowserPageSize || 25;
     const allOperational = (state.dashboardAssets || []).filter(a => OPERATIONAL_ASSET_APIS.has(a.assetType));
     const hasFlagged = allOperational.some(a => normalizeAssetStatus(a) === 3 || getAssetMeta(a.assetType, a.id).maintenanceStatus || getAssetMeta(a.assetType, a.id).maintenance?.length);
     const defaultScope = hasFlagged ? 'flagged' : 'all';
-    body.innerHTML = `
-        <div class="maintenance-browser-toolbar">
-            <div class="maintenance-browser-filters">
-                <input type="search" id="maintBrowserSearch" placeholder="Search asset, serial, tag, officer, location..." oninput="filterMaintenanceBrowserRows()">
-                <select id="maintBrowserScope" onchange="filterMaintenanceBrowserRows()">
-                    <option value="flagged" ${defaultScope === 'flagged' ? 'selected' : ''}>Flagged &amp; tracked assets</option>
-                    <option value="all" ${defaultScope === 'all' ? 'selected' : ''}>All operational assets (${allOperational.length})</option>
-                </select>
-                <select id="maintBrowserFilter" onchange="filterMaintenanceBrowserRows()">
-                    <option value="all">All maintenance states</option>
-                    <option value="maintained">Maintained</option>
-                    <option value="not_maintained">Not maintained</option>
-                </select>
-            </div>
-            <div class="maintenance-summary-pills" id="maintBrowserSummary"></div>
-        </div>
-        <div class="table-container"><table class="data-table"><thead><tr><th>Asset Information</th><th>Type &amp; Location</th><th>GLPI Status</th><th>Last Service</th><th>Maintenance Status</th><th></th></tr></thead><tbody id="maintBrowserRows"></tbody></table></div>
-    `;
-    filterMaintenanceBrowserRows();
+    const types = [...new Set(allOperational.map(a => getAssetTypeLabel(a.assetType, a)).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    body.innerHTML = `<div class="maintenance-browser-toolbar"><div class="maintenance-browser-filters">
+        <input type="search" id="maintBrowserSearch" placeholder="Search asset, serial, tag, officer, location..." oninput="filterMaintenanceBrowserRows(true)">
+        <select id="maintBrowserScope" data-no-search onchange="filterMaintenanceBrowserRows(true)"><option value="flagged" ${defaultScope === 'flagged' ? 'selected' : ''}>Flagged &amp; tracked assets</option><option value="all" ${defaultScope === 'all' ? 'selected' : ''}>All operational assets (${allOperational.length})</option></select>
+        <select id="maintBrowserType" data-no-search onchange="filterMaintenanceBrowserRows(true)"><option value="all">All asset types</option>${types.map(tp => `<option value="${escapeAttribute(tp)}">${escapeHtml(tp)}</option>`).join('')}</select>
+        <select id="maintBrowserFilter" data-no-search onchange="filterMaintenanceBrowserRows(true)"><option value="all">All maintenance states</option><option value="maintained">Maintained</option><option value="not_maintained">Not maintained</option></select>
+        <button type="button" class="btn-secondary btn-sm" onclick="exportMaintenanceBrowserCSV()"><i class="fas fa-download"></i> Download CSV</button>
+    </div><div class="maintenance-summary-pills" id="maintBrowserSummary"></div></div>
+    <div class="table-container maint-table-wrap"><table class="data-table"><thead><tr><th>Asset Information</th><th>Type &amp; Location</th><th>GLPI Status</th><th>Last Service</th><th>Maintenance Status</th><th></th></tr></thead><tbody id="maintBrowserRows"></tbody></table></div>
+    <div class="maint-pagination" id="maintBrowserPagination"></div>`;
+    filterMaintenanceBrowserRows(true);
 }
 
-window.filterMaintenanceBrowserRows = function() {
-    const tbody = document.getElementById('maintBrowserRows');
-    const summary = document.getElementById('maintBrowserSummary');
-    if (!tbody) return;
+function getFilteredMaintenanceBrowserRows() {
     const search = (document.getElementById('maintBrowserSearch')?.value || '').trim().toLowerCase();
     const scope = document.getElementById('maintBrowserScope')?.value || 'all';
-    const filter = document.getElementById('maintBrowserFilter')?.value || 'all';
-    const pool = (state.dashboardAssets || []).filter(asset => {
+    const typeFilter = document.getElementById('maintBrowserType')?.value || 'all';
+    const statusFilter = document.getElementById('maintBrowserFilter')?.value || 'all';
+    const scopedPool = (state.dashboardAssets || []).filter(asset => {
         if (!OPERATIONAL_ASSET_APIS.has(asset.assetType)) return false;
         const meta = getAssetMeta(asset.assetType, asset.id);
         if (scope === 'flagged' && normalizeAssetStatus(asset) !== 3 && !meta.maintenanceStatus && !meta.maintenance?.length) return false;
+        if (typeFilter !== 'all' && getAssetTypeLabel(asset.assetType, asset) !== typeFilter) return false;
         return true;
     });
-    const maintainedCount = pool.filter(a => getEffectiveMaintenanceStatus(a, getAssetMeta(a.assetType, a.id)) === 'maintained').length;
-    if (summary) summary.innerHTML = `<span>Total: ${pool.length}</span><span style="color:#059669">Maintained: ${maintainedCount}</span><span style="color:#d97706">Not maintained: ${pool.length - maintainedCount}</span>`;
-    const rows = pool.filter(asset => {
+    const rows = scopedPool.filter(asset => {
         const meta = getAssetMeta(asset.assetType, asset.id);
-        const mStatus = getEffectiveMaintenanceStatus(asset, meta);
-        if (filter !== 'all' && mStatus !== filter) return false;
+        if (statusFilter !== 'all' && getEffectiveMaintenanceStatus(asset, meta) !== statusFilter) return false;
         if (!search) return true;
         return [asset.name, asset.serial, asset.otherserial, getAssetTypeLabel(asset.assetType, asset), getAssetLocationLabel(asset, meta), getUserDisplayName(getAssetUserId(asset))].join(' ').toLowerCase().includes(search);
     });
-    tbody.innerHTML = rows.length ? rows.slice(0, 200).map(asset => {
-        const meta = getAssetMeta(asset.assetType, asset.id);
-        const mStatus = getEffectiveMaintenanceStatus(asset, meta);
-        const last = meta.maintenance?.[0];
-        const owner = getUserDisplayName(getAssetUserId(asset));
-        return `<tr>
-            <td><div class="asset-name-cell"><strong>${escapeHtml(asset.name || 'Unnamed')}</strong><small>Tag: ${escapeHtml(asset.otherserial || '-')} · Serial: ${escapeHtml(asset.serial || '-')} · ${escapeHtml(owner)}</small></div></td>
-            <td><div class="asset-name-cell"><strong>${escapeHtml(getAssetTypeLabel(asset.assetType, asset))}</strong><small>${escapeHtml(String(getAssetLocationLabel(asset, meta)))}</small></div></td>
-            <td>${getStatusBadge(asset)}</td>
-            <td>${last ? `<div class="asset-name-cell"><strong>${escapeHtml(last.type || 'Service')}</strong><small>${escapeHtml(formatDate(last.date))}</small></div>` : '<small style="color:var(--text-muted)">No service logged</small>'}</td>
-            <td><select class="maintenance-status-select ${mStatus === 'maintained' ? 'is-maintained' : 'is-not-maintained'}" onchange="updateAssetMaintenanceStatus('${escapeAttribute(asset.assetType)}', ${Number(asset.id)}, this.value, this)">
-                <option value="not_maintained" ${mStatus === 'not_maintained' ? 'selected' : ''}>Not maintained</option>
-                <option value="maintained" ${mStatus === 'maintained' ? 'selected' : ''}>Maintained</option>
-            </select></td>
-            <td><button class="btn-icon" title="Open maintenance history" onclick="closeModal('dashboardAssetsModal');viewAsset('${escapeAttribute(asset.assetType)}',${Number(asset.id)}).then(()=>switchAssetTab('maintenance'))"><i class="fas fa-arrow-right"></i></button></td>
-        </tr>`;
+    return { scopedPool, rows };
+}
+
+window.filterMaintenanceBrowserRows = function(resetPage = false) {
+    if (resetPage) state.maintBrowserPage = 1;
+    const tbody = document.getElementById('maintBrowserRows'), summary = document.getElementById('maintBrowserSummary'), pager = document.getElementById('maintBrowserPagination');
+    if (!tbody) return;
+    const { scopedPool, rows } = getFilteredMaintenanceBrowserRows();
+    const maintainedCount = scopedPool.filter(a => getEffectiveMaintenanceStatus(a, getAssetMeta(a.assetType, a.id)) === 'maintained').length;
+    if (summary) summary.innerHTML = `<span>Showing: ${rows.length} / ${scopedPool.length}</span><span style="color:#059669">Maintained: ${maintainedCount}</span><span style="color:#d97706">Not maintained: ${scopedPool.length - maintainedCount}</span>`;
+    const size = Number(state.maintBrowserPageSize || 25), totalPages = Math.max(1, Math.ceil(rows.length / size));
+    state.maintBrowserPage = Math.min(Math.max(1, Number(state.maintBrowserPage || 1)), totalPages);
+    const start = (state.maintBrowserPage - 1) * size, pageRows = rows.slice(start, start + size);
+    tbody.innerHTML = pageRows.length ? pageRows.map(asset => {
+        const meta = getAssetMeta(asset.assetType, asset.id), mStatus = getEffectiveMaintenanceStatus(asset, meta), last = meta.maintenance?.[0], owner = getUserDisplayName(getAssetUserId(asset));
+        return `<tr><td><div class="asset-name-cell"><strong>${escapeHtml(asset.name || 'Unnamed')}</strong><small>Tag: ${escapeHtml(asset.otherserial || '-')} · Serial: ${escapeHtml(asset.serial || '-')} · ${escapeHtml(owner)}</small></div></td><td><div class="asset-name-cell"><strong>${escapeHtml(getAssetTypeLabel(asset.assetType, asset))}</strong><small>${escapeHtml(String(getAssetLocationLabel(asset, meta)))}</small></div></td><td>${getStatusBadge(asset)}</td><td>${last ? `<div class="asset-name-cell"><strong>${escapeHtml(last.type || 'Service')}</strong><small>${escapeHtml(formatDate(last.date))}</small></div>` : '<small style="color:var(--text-muted)">No service logged</small>'}</td><td><select class="maintenance-status-select ${mStatus === 'maintained' ? 'is-maintained' : 'is-not-maintained'}" data-no-search onchange="updateAssetMaintenanceStatus('${escapeAttribute(asset.assetType)}', ${Number(asset.id)}, this.value, this)"><option value="not_maintained" ${mStatus === 'not_maintained' ? 'selected' : ''}>Not maintained</option><option value="maintained" ${mStatus === 'maintained' ? 'selected' : ''}>Maintained</option></select></td><td><button class="btn-icon" title="Open maintenance history" onclick="closeModal('dashboardAssetsModal');viewAsset('${escapeAttribute(asset.assetType)}',${Number(asset.id)}).then(()=>switchAssetTab('maintenance'))"><i class="fas fa-arrow-right"></i></button></td></tr>`;
     }).join('') : '<tr><td colspan="6"><div class="empty-state compact"><i class="fas fa-box-open"></i><h3>No matching assets</h3><p>Switch to "All operational assets" or adjust your filters.</p></div></td></tr>';
+    if (pager) pager.innerHTML = `<span>Showing ${rows.length ? start + 1 : 0}–${Math.min(start + size, rows.length)} of ${rows.length}</span><div class="maint-pagination-controls"><select data-no-search onchange="state.maintBrowserPageSize=Number(this.value);filterMaintenanceBrowserRows(true)">${[10, 25, 50, 100].map(n => `<option value="${n}" ${n === size ? 'selected' : ''}>${n} / page</option>`).join('')}</select><button type="button" class="btn-secondary btn-sm" ${state.maintBrowserPage <= 1 ? 'disabled' : ''} onclick="state.maintBrowserPage--;filterMaintenanceBrowserRows()">Previous</button><span>Page ${state.maintBrowserPage} / ${totalPages}</span><button type="button" class="btn-secondary btn-sm" ${state.maintBrowserPage >= totalPages ? 'disabled' : ''} onclick="state.maintBrowserPage++;filterMaintenanceBrowserRows()">Next</button></div>`;
+};
+
+window.exportMaintenanceBrowserCSV = function() {
+    const { rows } = getFilteredMaintenanceBrowserRows();
+    if (!rows.length) return showToast('No maintenance rows to download', 'error');
+    exportToCSV(rows.map(asset => { const meta = getAssetMeta(asset.assetType, asset.id), last = meta.maintenance?.[0] || {}; return { Asset: asset.name || 'Unnamed', AssetTag: asset.otherserial || '', SerialNumber: asset.serial || '', AssetType: getAssetTypeLabel(asset.assetType, asset), AssignedTo: getUserDisplayName(getAssetUserId(asset)), Location: getAssetLocationLabel(asset, meta), GLPIStatus: STATUS_MAP[normalizeAssetStatus(asset)]?.label || `State ${normalizeAssetStatus(asset)}`, MaintenanceStatus: getEffectiveMaintenanceStatus(asset, meta) === 'maintained' ? 'Maintained' : 'Not maintained', LastServiceDate: last.date || '', LastServiceType: last.type || '', LastServiceNotes: last.notes || '', LastMaintenanceUpdate: meta.maintenanceUpdatedAt || '' }; }), 'Asset_Maintenance_Report');
+    showToast(`Downloaded ${rows.length} maintenance record(s)`, 'success');
 };
 
 window.updateAssetMaintenanceStatus = async function(apiType, id, value, selectEl) {
@@ -2099,6 +2101,60 @@ window.updateAssetMaintenanceStatus = async function(apiType, id, value, selectE
     if (selectEl) selectEl.className = `maintenance-status-select ${next === 'maintained' ? 'is-maintained' : 'is-not-maintained'}`;
     await saveAssetMeta(apiType, id, { maintenanceStatus: next, maintenanceUpdatedAt: new Date().toISOString() });
     await appendAssetActivity(apiType, id, { type: 'maintenance', title: next === 'maintained' ? 'Marked as Maintained' : 'Marked as Not maintained', description: 'Updated from Asset Maintenance view.' });
-    filterMaintenanceBrowserRows();
+    filterMaintenanceBrowserRows(false);
+    showToast(`Asset marked as ${next === 'maintained' ? 'Maintained' : 'Not maintained'}`, 'success');
+};
+
+function getFilteredMaintenanceBrowserRows() {
+    const search = (document.getElementById('maintBrowserSearch')?.value || '').trim().toLowerCase();
+    const scope = document.getElementById('maintBrowserScope')?.value || 'all';
+    const typeFilter = document.getElementById('maintBrowserType')?.value || 'all';
+    const statusFilter = document.getElementById('maintBrowserFilter')?.value || 'all';
+    const scopedPool = (state.dashboardAssets || []).filter(asset => {
+        if (!OPERATIONAL_ASSET_APIS.has(asset.assetType)) return false;
+        const meta = getAssetMeta(asset.assetType, asset.id);
+        if (scope === 'flagged' && normalizeAssetStatus(asset) !== 3 && !meta.maintenanceStatus && !meta.maintenance?.length) return false;
+        if (typeFilter !== 'all' && getAssetTypeLabel(asset.assetType, asset) !== typeFilter) return false;
+        return true;
+    });
+    const rows = scopedPool.filter(asset => {
+        const meta = getAssetMeta(asset.assetType, asset.id);
+        if (statusFilter !== 'all' && getEffectiveMaintenanceStatus(asset, meta) !== statusFilter) return false;
+        if (!search) return true;
+        return [asset.name, asset.serial, asset.otherserial, getAssetTypeLabel(asset.assetType, asset), getAssetLocationLabel(asset, meta), getUserDisplayName(getAssetUserId(asset))].join(' ').toLowerCase().includes(search);
+    });
+    return { scopedPool, rows };
+}
+
+window.filterMaintenanceBrowserRows = function(resetPage = false) {
+    if (resetPage) state.maintBrowserPage = 1;
+    const tbody = document.getElementById('maintBrowserRows'), summary = document.getElementById('maintBrowserSummary'), pager = document.getElementById('maintBrowserPagination');
+    if (!tbody) return;
+    const { scopedPool, rows } = getFilteredMaintenanceBrowserRows();
+    const maintainedCount = scopedPool.filter(a => getEffectiveMaintenanceStatus(a, getAssetMeta(a.assetType, a.id)) === 'maintained').length;
+    if (summary) summary.innerHTML = `<span>Showing: ${rows.length} / ${scopedPool.length}</span><span style="color:#059669">Maintained: ${maintainedCount}</span><span style="color:#d97706">Not maintained: ${scopedPool.length - maintainedCount}</span>`;
+    const size = Number(state.maintBrowserPageSize || 25), totalPages = Math.max(1, Math.ceil(rows.length / size));
+    state.maintBrowserPage = Math.min(Math.max(1, Number(state.maintBrowserPage || 1)), totalPages);
+    const start = (state.maintBrowserPage - 1) * size, pageRows = rows.slice(start, start + size);
+    tbody.innerHTML = pageRows.length ? pageRows.map(asset => {
+        const meta = getAssetMeta(asset.assetType, asset.id), mStatus = getEffectiveMaintenanceStatus(asset, meta), last = meta.maintenance?.[0], owner = getUserDisplayName(getAssetUserId(asset));
+        return `<tr><td><div class="asset-name-cell"><strong>${escapeHtml(asset.name || 'Unnamed')}</strong><small>Tag: ${escapeHtml(asset.otherserial || '-')} · Serial: ${escapeHtml(asset.serial || '-')} · ${escapeHtml(owner)}</small></div></td><td><div class="asset-name-cell"><strong>${escapeHtml(getAssetTypeLabel(asset.assetType, asset))}</strong><small>${escapeHtml(String(getAssetLocationLabel(asset, meta)))}</small></div></td><td>${getStatusBadge(asset)}</td><td>${last ? `<div class="asset-name-cell"><strong>${escapeHtml(last.type || 'Service')}</strong><small>${escapeHtml(formatDate(last.date))}</small></div>` : '<small style="color:var(--text-muted)">No service logged</small>'}</td><td><select class="maintenance-status-select ${mStatus === 'maintained' ? 'is-maintained' : 'is-not-maintained'}" data-no-search onchange="updateAssetMaintenanceStatus('${escapeAttribute(asset.assetType)}', ${Number(asset.id)}, this.value, this)"><option value="not_maintained" ${mStatus === 'not_maintained' ? 'selected' : ''}>Not maintained</option><option value="maintained" ${mStatus === 'maintained' ? 'selected' : ''}>Maintained</option></select></td><td><button class="btn-icon" title="Open maintenance history" onclick="closeModal('dashboardAssetsModal');viewAsset('${escapeAttribute(asset.assetType)}',${Number(asset.id)}).then(()=>switchAssetTab('maintenance'))"><i class="fas fa-arrow-right"></i></button></td></tr>`;
+    }).join('') : '<tr><td colspan="6"><div class="empty-state compact"><i class="fas fa-box-open"></i><h3>No matching assets</h3><p>Switch to "All operational assets" or adjust your filters.</p></div></td></tr>';
+    if (pager) pager.innerHTML = `<span>Showing ${rows.length ? start + 1 : 0}–${Math.min(start + size, rows.length)} of ${rows.length}</span><div class="maint-pagination-controls"><select data-no-search onchange="state.maintBrowserPageSize=Number(this.value);filterMaintenanceBrowserRows(true)">${[10, 25, 50, 100].map(n => `<option value="${n}" ${n === size ? 'selected' : ''}>${n} / page</option>`).join('')}</select><button type="button" class="btn-secondary btn-sm" ${state.maintBrowserPage <= 1 ? 'disabled' : ''} onclick="state.maintBrowserPage--;filterMaintenanceBrowserRows()">Previous</button><span>Page ${state.maintBrowserPage} / ${totalPages}</span><button type="button" class="btn-secondary btn-sm" ${state.maintBrowserPage >= totalPages ? 'disabled' : ''} onclick="state.maintBrowserPage++;filterMaintenanceBrowserRows()">Next</button></div>`;
+};
+
+window.exportMaintenanceBrowserCSV = function() {
+    const { rows } = getFilteredMaintenanceBrowserRows();
+    if (!rows.length) return showToast('No maintenance rows to download', 'error');
+    exportToCSV(rows.map(asset => { const meta = getAssetMeta(asset.assetType, asset.id), last = meta.maintenance?.[0] || {}; return { Asset: asset.name || 'Unnamed', AssetTag: asset.otherserial || '', SerialNumber: asset.serial || '', AssetType: getAssetTypeLabel(asset.assetType, asset), AssignedTo: getUserDisplayName(getAssetUserId(asset)), Location: getAssetLocationLabel(asset, meta), GLPIStatus: STATUS_MAP[normalizeAssetStatus(asset)]?.label || `State ${normalizeAssetStatus(asset)}`, MaintenanceStatus: getEffectiveMaintenanceStatus(asset, meta) === 'maintained' ? 'Maintained' : 'Not maintained', LastServiceDate: last.date || '', LastServiceType: last.type || '', LastServiceNotes: last.notes || '', LastMaintenanceUpdate: meta.maintenanceUpdatedAt || '' }; }), 'Asset_Maintenance_Report');
+    showToast(`Downloaded ${rows.length} maintenance record(s)`, 'success');
+};
+
+window.updateAssetMaintenanceStatus = async function(apiType, id, value, selectEl) {
+    const next = value === 'maintained' ? 'maintained' : 'not_maintained';
+    if (selectEl) selectEl.className = `maintenance-status-select ${next === 'maintained' ? 'is-maintained' : 'is-not-maintained'}`;
+    await saveAssetMeta(apiType, id, { maintenanceStatus: next, maintenanceUpdatedAt: new Date().toISOString() });
+    await appendAssetActivity(apiType, id, { type: 'maintenance', title: next === 'maintained' ? 'Marked as Maintained' : 'Marked as Not maintained', description: 'Updated from Asset Maintenance view.' });
+    filterMaintenanceBrowserRows(false);
     showToast(`Asset marked as ${next === 'maintained' ? 'Maintained' : 'Not maintained'}`, 'success');
 };

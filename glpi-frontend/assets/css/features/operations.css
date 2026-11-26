@@ -284,6 +284,8 @@
 .document-upload { transition: border-color .2s, background .2s, transform .2s; }
 
 #dashboardAssetsModal .modal-content { max-width: 980px; }
+#dashboardAssetsModal .modal-content.modal-xl { max-width: min(1440px, 96vw); width: 96vw; min-height: 80vh; max-height: 92vh; display: flex; flex-direction: column; }
+#dashboardAssetsModal .modal-content.modal-xl .modal-body { flex: 1; min-height: 0; max-height: none; overflow-y: auto; }
 #dashboardAssetsModal .table-container { max-height: 60vh; }
 
 @media (max-width: 1400px) {
@@ -985,3 +987,8 @@
     .sla-record-table td:last-child { position: absolute; top: 8px; right: 8px; width: auto; padding: 0; }
     .sla-record-table td:last-child::before { display: none; }
 }
+
+.maint-table-wrap { max-height: 56vh; overflow: auto; border: 1px solid var(--border); border-radius: 12px; }
+.maint-table-wrap thead th { position: sticky; top: 0; z-index: 2; background: var(--bg-subtle); }
+.maint-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; font-size: 13px; }
+.maint-pagination-controls { display: flex; align-items: center; gap: 8px; }
